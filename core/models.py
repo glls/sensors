@@ -1,5 +1,6 @@
-from django.db import models
 import django_timescaledb.models as timescale_models
+from django.db import models
+
 
 class Sensor(models.Model):
     type = models.CharField(max_length=50)
@@ -13,6 +14,7 @@ class Sensor(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class SensorDataTemp(timescale_models.HypertableModel):
     time = models.DateTimeField(primary_key=True)
@@ -28,6 +30,7 @@ class SensorDataTemp(timescale_models.HypertableModel):
             models.Index(fields=['sensor', 'time'], name='idx_sensor_data_temp_sensor_id_time'),
         ]
         ordering = ['-time']
+
 
 class SensorDataAir(timescale_models.HypertableModel):
     time = models.DateTimeField(primary_key=True)
@@ -45,6 +48,7 @@ class SensorDataAir(timescale_models.HypertableModel):
             models.Index(fields=['sensor', 'time'], name='idx_sensor_data_air_sensor_id_time'),
         ]
         ordering = ['-time']
+
 
 class SensorDataIndoor(timescale_models.HypertableModel):
     time = models.DateTimeField(primary_key=True)
