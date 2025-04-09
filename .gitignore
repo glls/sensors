@@ -1,0 +1,99 @@
+Okay, here's a common and recommended .gitignore file for a Django project like your sensors project. This file tells Git which files and directories it should intentionally ignore and not track in your repository.
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+eggs/
+lib64/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.whl
+MANIFEST.in
+*.manifest
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+*.log
+
+# Unit test / coverage reports
+.coverage
+*.tcov
+nosetests.xml
+coverage.xml
+*.cover
+.tox
+.pytest_cache
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+*.pot
+media
+static
+staticfiles/
+*.sqlite3
+*.db
+
+# Environment-specific files
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+instance/
+_build/
+develop-eggs/
+parts/
+eggs/
+.cache
+lib/
+lib-dynload/
+bin/
+.project
+.settings
+.python-version
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Visual Studio Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS or Editor backups
+*~
+.#*
+.swp
+.swo
+
+# Other common ignore patterns
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.DS_Store       # macOS
+Thumbs.db        # Windows
