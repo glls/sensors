@@ -74,7 +74,7 @@ WSGI_APPLICATION = 'sensors.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'timescale.db.backends.postgresql',
         # Or 'django_timescaledb.backends.postgresql' if using TimescaleDB ORM features
         'NAME': 'sensors',  # Replace with your TimescaleDB database name
         'USER': 'postgres',  # Replace with your TimescaleDB username
