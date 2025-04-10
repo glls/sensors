@@ -32,7 +32,7 @@ class SensorDataAirSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SensorDataAir
-        fields = ['time', 'sensor_id', 'temperature', 'humidity', 'pressure', 'p1', 'p2']
+        fields = ['time', 'sensor_id', 'temperature', 'humidity', 'pressure', 'p1', 'p2', 'signal']
 
     def create(self, validated_data):
         sensor_id = validated_data.pop('sensor_id')
