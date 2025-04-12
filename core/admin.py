@@ -16,7 +16,7 @@ class ReadOnlyAdmin(admin.ModelAdmin):
 
 @admin.register(Sensor)
 class SensorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'location', 'comments')
+    list_display = ('id', 'name', 'type', 'location', 'comments')
     search_fields = ('name', 'location')
 
 
