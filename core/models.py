@@ -23,6 +23,7 @@ class SensorDataTemp(TimescaleModel):
 
     class Meta:
         db_table = 'sensor_data_temp'
+        verbose_name_plural = "Temperature Data"
         # ordering = ['-time']
 
 
@@ -37,6 +38,7 @@ class SensorDataAir(TimescaleModel):
 
     class Meta:
         db_table = 'sensor_data_air'
+        verbose_name_plural = "Air Quality Data (outdoor)"
 
 
 class SensorDataIndoor(TimescaleModel):
@@ -48,3 +50,4 @@ class SensorDataIndoor(TimescaleModel):
 
     class Meta:
         db_table = 'sensor_data_indoor'
+        verbose_name_plural = "Air Quality Data (indoor)"
