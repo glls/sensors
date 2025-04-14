@@ -43,7 +43,6 @@ class SensorDataAir(TimescaleModel):
 
 class SensorDataIndoor(TimescaleModel):
     sensor = models.ForeignKey(Sensor, on_delete=models.CASCADE, db_column='sensor_id')
-    status = models.IntegerField()
     aqi = models.IntegerField()
     tvoc = models.IntegerField()
     eco2 = models.IntegerField()

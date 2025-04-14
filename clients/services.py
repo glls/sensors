@@ -103,14 +103,14 @@ def get_temp_data_last(sensor_id):
             cur.close()
             conn.close()
 
-def send_indoor_data_to_api(sensor_id, AQI, TVOC, eCO2):
+def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
     try:
         payload = {
             "time": datetime.now(pytz.utc).isoformat(),
             "sensor_id": sensor_id,
-            "AQI": AQI,
-            "TVOC": TVOC,
-            "eCO2": eCO2
+            "aqi": aqi,
+            "tvoc": tvoc,
+            "eco2": e_co2
         }
         response = requests.post(API_INDOOR_URL, json=payload)
         if response.status_code == 201:
@@ -121,7 +121,7 @@ def send_indoor_data_to_api(sensor_id, AQI, TVOC, eCO2):
         print(f"HTTP request to API failed: {e}")
 
 
-def send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, AQI, TVOC, eCO2):
+def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
     if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return
@@ -133,15 +133,15 @@ def send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, AQI, TVOC, eCO2):
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
-            INSERT INTO sensor_data_indoor (time, sensor_id, AQI, TVOC, eCO2)
+            INSERT INTO sensor_data_indoor (time, sensor_id, aqi, tvoc, eco2)
             VALUES (%s, %s, %s, %s, %s);
         """
-        data = (now_utc, ENS160_SENSOR_ID, AQI, TVOC, eCO2)
+        data = (now_utc, ens160_sensor_id, aqi, tvoc, e_co2)
         cur.execute(sql, data)
         conn.commit()
-        print(f"Sensor [{ENS160_SENSOR_ID}] indoor data sent to TimescaleDB successfully.")
+        print(f"Sensor [{ens160_sensor_id}] indoor data sent to TimescaleDB successfully.")
     except psycopg2.Error as e:
-        print(f"Error sending sensor [{ENS160_SENSOR_ID}] indoor data to TimescaleDB: {e}")
+        print(f"Error sending sensor [{ens160_sensor_id}] indoor data to TimescaleDB: {e}")
         if conn:
             conn.rollback()
     finally:

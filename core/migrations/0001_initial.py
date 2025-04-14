@@ -48,7 +48,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('time', timescale.db.models.fields.TimescaleDateTimeField(interval='1 day')),
-                ('status', models.IntegerField()),
                 ('aqi', models.IntegerField()),
                 ('tvoc', models.IntegerField()),
                 ('eco2', models.IntegerField()),
