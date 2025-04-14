@@ -2,13 +2,10 @@ import os
 import time
 
 import bme280
-import pytz  # For timezone handling
-import requests
 import smbus2
 from dotenv import load_dotenv
-from requests.exceptions import RequestException
 
-from services import send_data_to_api, send_data_to_timescaledb
+from services import send_temp_data_to_api, send_temp_data_to_timescaledb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -52,15 +49,15 @@ while True:
 
             # Print the readings
             print(f"Temperature: {temperature:.2f} °C\t"
-                  f"Pressure: {pressure:.2f} hPa\t"
-                  f"Humidity: {humidity:.2f} %")
+                  f"Humidity: {humidity:.2f} %\t"
+                  f"Pressure: {pressure:.2f} hPa")
 
             # Send data based on configuration
             if SEND_TO_API:
-                send_data_to_api(BME280_SENSOR_ID, temperature, pressure, humidity)
+                send_temp_data_to_api(BME280_SENSOR_ID, temperature, humidity, pressure)
 
             if SEND_TO_TIMESCALEDB:
-                send_data_to_timescaledb(BME280_SENSOR_ID, temperature, pressure, humidity)
+                send_temp_data_to_timescaledb(BME280_SENSOR_ID, temperature, humidity, pressure)
 
         time.sleep(BME280_INTERVAL)
 

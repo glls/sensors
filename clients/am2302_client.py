@@ -3,10 +3,9 @@ import time
 
 import adafruit_dht
 import board
-import pytz  # For timezone handling
 from dotenv import load_dotenv
 
-from services import send_data_to_api, send_data_to_timescaledb
+from services import send_temp_data_to_api, send_temp_data_to_timescaledb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -40,10 +39,10 @@ while True:
               f"Humidity: {humidity:.2f} %")
 
         if SEND_TO_API:
-            send_data_to_api(DHT22_SENSOR_ID, temperature, humidity)
+            send_temp_data_to_api(DHT22_SENSOR_ID, temperature, humidity)
 
         if SEND_TO_TIMESCALEDB:
-            send_data_to_timescaledb(DHT22_SENSOR_ID, temperature, humidity)
+            send_temp_data_to_timescaledb(DHT22_SENSOR_ID, temperature, humidity)
 
         time.sleep(DHT22_INTERVAL)
 
