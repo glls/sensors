@@ -39,12 +39,12 @@ else:
 
 while True:
     try:
-        aqi = ens.aqi
-        tvoc = ens.tvoc
-        e_co2 = ens.e_co2
-        print(f"AQI (1-5): {aqi}\t"
-              f"TVOC (ppb): {tvoc}\t"
-              f"eCO2 (ppm): {e_co2}")
+        aqi = ens.AQI
+        tvoc = ens.TVOC
+        e_co2 = ens.eCO2
+        print(f"AQI : {aqi}(1-5)\t"
+              f"TVOC : {tvoc} (ppb)\t"
+              f"eCO2 : {e_co2} (ppm)")
         # Send indoor air quality data based on configuration
         if SEND_TO_API:
             send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
