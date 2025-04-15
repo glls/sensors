@@ -36,6 +36,6 @@ class SensorDataAirAdmin(ReadOnlyAdmin):
 
 @admin.register(SensorDataIndoor)
 class SensorDataIndoorAdmin(ReadOnlyAdmin):
-    list_display = ('time', 'sensor', 'status', 'aqi', 'tvoc', 'eco2')
+    list_display = ('time', 'sensor', 'aqi', 'tvoc', 'eco2')
     list_filter = ('sensor',)
     date_hierarchy = 'time'

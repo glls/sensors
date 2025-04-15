@@ -49,7 +49,7 @@ class SensorDataIndoorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SensorDataIndoor
-        fields = ['time', 'sensor_id', 'status', 'aqi', 'tvoc', 'eco2']
+        fields = ['time', 'sensor_id', 'aqi', 'tvoc', 'eco2']
 
     def create(self, validated_data):
         sensor_id = validated_data.pop('sensor_id')
