@@ -1,8 +1,7 @@
 import os
 import time
 
-import adafruit_ens160
-import board
+from DFRobot_ENS160 import *
 from dotenv import load_dotenv
 
 from services import get_temp_data_last, send_indoor_data_to_timescaledb, send_indoor_data_to_api
@@ -24,27 +23,54 @@ if ENS160_SENSOR_ID is None:
     print("Error: ENS160_SENSOR_ID not set in environment variables.")
     exit(1)
 
-# Initialize I2C bus
-i2c = board.I2C()  # uses board.SCL and board.SDA
-ens = adafruit_ens160.ENS160(i2c)
+'''
+  # Select communication interface I2C, please comment out SPI interface. And vise versa.
+  # I2C : For Fermion version, I2C communication address setting: 
+  #         connect SDO pin to GND, I2C address is 0×52 now;
+  #         connect SDO pin to VCC(3v3), I2C address is 0x53 now
+  # SPI : Set up digital pin according to the on-board pin connected with SPI chip-select pin.
+'''
+sensor = DFRobot_ENS160_I2C(i2c_addr=0x53, bus=1)
+
+
+def setup(ambient_temp=25.0, ambient_hum=50.0):
+    while (sensor.begin() == False):
+        print('Please check that the device is properly connected')
+        time.sleep(3)
+    print("sensor begin successfully!!!")
+
+    '''
+      # Configure power mode
+      # mode Configurable power mode:
+      #   ENS160_SLEEP_MODE: DEEP SLEEP mode (low power standby)
+      #   ENS160_IDLE_MODE: IDLE mode (low-power)
+      #   ENS160_STANDARD_MODE: STANDARD Gas Sensing Modes
+    '''
+    sensor.set_PWR_mode(ENS160_STANDARD_MODE)
+
+    '''
+      # Users write ambient temperature and relative humidity into ENS160 for calibration and compensation of the measured gas data.
+      # ambient_temp Compensate the current ambient temperature, float type, unit: C
+      # relative_humidity Compensate the current ambient humidity, float type, unit: %rH
+    '''
+    sensor.set_temp_and_hum(ambient_temp, ambient_hum)
+
+
 # Get the last sensor data from BME280_SENSOR_ID in TimescaleDB
 last_data = get_temp_data_last(BME280_SENSOR_ID)
 if last_data:
     print(f"Last sensor data from TimescaleDB: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} %")
-    ens.temperature_compensation = last_data['temperature']
-    ens.humidity_compensation = last_data['humidity']
+    setup(last_data['temperature'], last_data['humidity'])
 else:
-    ens.temperature_compensation = 25.0  # Set temperature compensation to 25 degrees Celsius
-    ens.humidity_compensation = 50.0  # Set humidity compensation to 50% relative humidity
+    setup()
 
 while True:
     try:
-        aqi = ens.AQI
-        tvoc = ens.TVOC
-        e_co2 = ens.eCO2
-        print(f"AQI : {aqi}(1-5)\t"
-              f"TVOC : {tvoc} (ppb)\t"
-              f"eCO2 : {e_co2} (ppm)")
+        sensor_status = sensor.get_ENS160_status()
+        aqi = sensor.get_AQI
+        tvoc = sensor.get_TVOC_ppb
+        e_co2 = sensor.get_ECO2_ppm
+        print(f"status: {sensor_status}\tAQI: {aqi} (1-5)\tTVOC: {tvoc} (ppb)\teCO2: {e_co2} (ppm)")
         # Send indoor air quality data based on configuration
         if SEND_TO_API:
             send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
