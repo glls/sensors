@@ -64,6 +64,21 @@ if last_data:
 else:
     setup()
 
+
+def validate_data(aqi, tvoc, e_co2):
+    if (aqi is None or aqi < 1 or aqi > 5):
+        print("Invalid AQI value")
+        return False
+    if (tvoc is None or tvoc < 0 or tvoc > 65000):
+        print("Invalid TVOC value")
+        return False
+    if (e_co2 is None or e_co2 < 400 or e_co2 > 65000):
+        print("Invalid eCO2 value")
+        return False
+
+    return True
+
+
 while True:
     try:
         sensor_status = sensor.get_ENS160_status()
@@ -72,11 +87,13 @@ while True:
         e_co2 = sensor.get_ECO2_ppm
         print(f"status: {sensor_status}\tAQI: {aqi} (1-5)\tTVOC: {tvoc} (ppb)\teCO2: {e_co2} (ppm)")
         # Send indoor air quality data based on configuration
-        if SEND_TO_API:
-            send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+        if validate_data(aqi, tvoc, e_co2):
 
-        if SEND_TO_TIMESCALEDB:
-            send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+            if SEND_TO_API:
+                send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+
+            if SEND_TO_TIMESCALEDB:
+                send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
 
         time.sleep(ENS160_INTERVAL)
 
