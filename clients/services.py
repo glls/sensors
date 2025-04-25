@@ -51,9 +51,9 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
-            INSERT INTO sensor_data_temp (time, sensor_id, temperature, humidity, pressure)
-            VALUES (%s, %s, %s, %s, %s);
-        """
+              INSERT INTO sensor_data_temp (time, sensor_id, temperature, humidity, pressure)
+              VALUES (%s, %s, %s, %s, %s); \
+              """
         data = (now_utc, sensor_id, temperature, humidity, pressure)
         cur.execute(sql, data)
         conn.commit()
@@ -68,7 +68,7 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
             conn.close()
 
 
-def get_temp_data_last(sensor_id):
+def get_temp_data_last_timescaledb(sensor_id):
     if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return None
@@ -79,12 +79,12 @@ def get_temp_data_last(sensor_id):
                                 user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
         cur = conn.cursor()
         sql = """
-            SELECT time, temperature, humidity 
-            FROM sensor_data_temp 
-            WHERE sensor_id = %s 
-            ORDER BY time DESC 
-            LIMIT 1;
-        """
+              SELECT time, temperature, humidity
+              FROM sensor_data_temp
+              WHERE sensor_id = %s
+              ORDER BY time DESC
+                  LIMIT 1; \
+              """
         cur.execute(sql, (sensor_id,))
         row = cur.fetchone()
 
@@ -103,6 +103,51 @@ def get_temp_data_last(sensor_id):
         if conn:
             cur.close()
             conn.close()
+
+
+def get_temp_data_last_api(sensor_id):
+    """
+    Fetches the last temperature reading for a specific sensor from the API.
+
+    Args:
+        sensor_id: The ID of the sensor to fetch data for
+
+    Returns:
+        A dictionary containing temperature data or None if not found
+    """
+    try:
+        # Construct the URL for the last temperature endpoint
+        api_base = os.environ.get('API_BASE_URL', '').rstrip('/')
+        if not api_base:
+            print("Error: API_BASE_URL not set in environment variables.")
+            return None
+
+        url = f"{api_base}/sensors/{sensor_id}/temperature/last/"
+
+        # Make the API request
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'time': data.get('time'),
+                'temperature': data.get('temperature'),
+                'humidity': data.get('humidity'),
+                'pressure': data.get('pressure')
+            }
+        elif response.status_code == 404:
+            print(f"No temperature data found for sensor ID {sensor_id}")
+            return None
+        else:
+            print(f"API request failed with status code: {response.status_code}")
+            return None
+
+    except RequestException as e:
+        print(f"HTTP request to API failed: {e}")
+        return None
+    except Exception as e:
+        print(f"Error getting last temperature data from API: {e}")
+        return None
 
 
 def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
@@ -135,9 +180,9 @@ def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
-            INSERT INTO sensor_data_indoor (time, sensor_id, aqi, tvoc, eco2)
-            VALUES (%s, %s, %s, %s, %s);
-        """
+              INSERT INTO sensor_data_indoor (time, sensor_id, aqi, tvoc, eco2)
+              VALUES (%s, %s, %s, %s, %s); \
+              """
         data = (now_utc, ens160_sensor_id, aqi, tvoc, e_co2)
         cur.execute(sql, data)
         conn.commit()
@@ -185,9 +230,9 @@ def send_air_data_to_timescaledb(sensor_id, pm10, pm25, temperature=None, humidi
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
-            INSERT INTO sensor_data_air (time, sensor_id, p1, p2, temperature, humidity, pressure, signal)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-        """
+              INSERT INTO sensor_data_air (time, sensor_id, p1, p2, temperature, humidity, pressure, signal)
+              VALUES (%s, %s, %s, %s, %s, %s, %s, %s); \
+              """
         data = (now_utc, sensor_id, pm10, pm25, temperature, humidity, pressure, signal)
         cur.execute(sql, data)
         conn.commit()

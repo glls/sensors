@@ -8,6 +8,7 @@ from .views import (
     SensorDataTempListAPIView,  # Optional: For listing temperature data
     SensorDataAirListAPIView,  # Optional: For listing air data
     SensorDataIndoorListAPIView,  # Optional: For listing indoor data
+    LastSensorDataTempAPIView,  # Optional: For getting the last temperature data
 )
 
 urlpatterns = [
@@ -19,4 +20,6 @@ urlpatterns = [
     path('sensors/temperature/data/', SensorDataTempListAPIView.as_view(), name='list-temp-data'),
     path('sensors/air/data/', SensorDataAirListAPIView.as_view(), name='list-air-data'),
     path('sensors/indoor/data/', SensorDataIndoorListAPIView.as_view(), name='list-indoor-data'),
+    path('sensors/<int:sensor_id>/temperature/last/', LastSensorDataTempAPIView.as_view(), name='last-temp-data'),
+
 ]

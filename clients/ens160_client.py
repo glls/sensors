@@ -1,18 +1,15 @@
 import os
-import time
 
-from DFRobot_ENS160 import *
 from dotenv import load_dotenv
 
-from services import get_temp_data_last, send_indoor_data_to_timescaledb, send_indoor_data_to_api
+from DFRobot_ENS160 import *
+from services import get_temp_data_last_timescaledb, send_indoor_data_to_timescaledb, send_indoor_data_to_api
 
 # Load environment variables from .env file
 load_dotenv()
 
 SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
-
 SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
-# unique sensor ID
 ENS160_SENSOR_ID = os.environ.get('ENS160_SENSOR_ID')
 BME280_SENSOR_ID = os.environ.get('BME280_SENSOR_ID')
 
@@ -57,7 +54,7 @@ def setup(ambient_temp=25.0, ambient_hum=50.0):
 
 
 # Get the last sensor data from BME280_SENSOR_ID in TimescaleDB
-last_data = get_temp_data_last(BME280_SENSOR_ID)
+last_data = get_temp_data_last_timescaledb(BME280_SENSOR_ID)
 if last_data:
     print(f"Last sensor data from TimescaleDB: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} %")
     setup(last_data['temperature'], last_data['humidity'])
