@@ -1,15 +1,16 @@
 from django.urls import path
 
 from .views import (
-    SensorListAPIView,  # Optional: For listing sensors
-    SensorDataTempListAPIView,  # Optional: For listing temperature data
-    SensorDataAirListAPIView,  # Optional: For listing air data
-    SensorDataIndoorListAPIView,  # Optional: For listing indoor data
+    SensorListCreateAPIView,  # For getting the last temperature data
+    SensorDataTempListCreateAPIView,
+    SensorDataAirListCreateAPIView,
+    SensorDataIndoorListCreateAPIView
 )
 
 urlpatterns = [
-    path('sensors/', SensorListAPIView.as_view(), name='list-sensors'),
-    path('sensors/temperature/data/', SensorDataTempListAPIView.as_view(), name='list-temp-data'),
-    path('sensors/air/data/', SensorDataAirListAPIView.as_view(), name='list-air-data'),
-    path('sensors/indoor/data/', SensorDataIndoorListAPIView.as_view(), name='list-indoor-data'),
+    path('sensors/', SensorListCreateAPIView.as_view(), name='sensors'),
+    path('sensors/temperature/data/', SensorDataTempListCreateAPIView.as_view(), name='temp-data'),
+    path('sensors/air/data/', SensorDataAirListCreateAPIView.as_view(), name='air-data'),
+    path('sensors/indoor/data/', SensorDataIndoorListCreateAPIView.as_view(), name='indoor-data'),
+
 ]

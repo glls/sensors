@@ -9,38 +9,21 @@ from .serializers import (
 )
 
 
-class SensorDataTempCreateView(generics.CreateAPIView):
-    queryset = SensorDataTemp.objects.all()
-    serializer_class = SensorDataTempSerializer
-
-
-class SensorDataAirCreateView(generics.CreateAPIView):
-    queryset = SensorDataAir.objects.all()
-    serializer_class = SensorDataAirSerializer
-
-
-class SensorDataIndoorCreateView(generics.CreateAPIView):
-    queryset = SensorDataIndoor.objects.all()
-    serializer_class = SensorDataIndoorSerializer
-
-
-# Optional views for listing data (for debugging or other purposes)
-class SensorListAPIView(generics.ListAPIView):
+class SensorListCreateAPIView(generics.ListCreateAPIView):
     queryset = Sensor.objects.all()
     serializer_class = SensorSerializer
 
 
-class SensorDataTempListAPIView(generics.ListAPIView):
+class SensorDataTempListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataTemp.objects.all()
     serializer_class = SensorDataTempSerializer
 
 
-class SensorDataAirListAPIView(generics.ListAPIView):
+class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataAir.objects.all()
     serializer_class = SensorDataAirSerializer
 
 
-class SensorDataIndoorListAPIView(generics.ListAPIView):
+class SensorDataIndoorListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataIndoor.objects.all()
     serializer_class = SensorDataIndoorSerializer
-
