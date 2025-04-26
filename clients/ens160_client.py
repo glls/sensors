@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 from DFRobot_ENS160 import *
-from services import get_temp_data_last_timescaledb, send_indoor_data_to_timescaledb, send_indoor_data_to_api
+import services
 
 # Load environment variables from .env file
 load_dotenv()
@@ -54,9 +54,15 @@ def setup(ambient_temp=25.0, ambient_hum=50.0):
 
 
 # Get the last sensor data from BME280_SENSOR_ID in TimescaleDB
-last_data = get_temp_data_last_timescaledb(BME280_SENSOR_ID)
+if SEND_TO_TIMESCALEDB:
+    last_data = services.get_temp_data_last_timescaledb(BME280_SENSOR_ID)
+elif SEND_TO_API:
+    last_data = services.get_temp_data_last_api(BME280_SENSOR_ID)
+else:
+    last_data = None
+
 if last_data:
-    print(f"Last sensor data from TimescaleDB: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} %")
+    print(f"Last temperature sensor data: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} %")
     setup(last_data['temperature'], last_data['humidity'])
 else:
     setup()
@@ -87,10 +93,10 @@ while True:
         if validate_data(aqi, tvoc, e_co2):
 
             if SEND_TO_API:
-                send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+                services.send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
 
             if SEND_TO_TIMESCALEDB:
-                send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+                services.send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
 
         time.sleep(ENS160_INTERVAL)
 
