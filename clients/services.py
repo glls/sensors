@@ -124,7 +124,7 @@ def get_temp_data_last_api(sensor_id):
             return None
 
         # Construct the URL for the latest temperature endpoint
-        url = f"{api_url}/latest/{sensor_id}/"
+        url = f"{api_url}latest/{sensor_id}/"
 
         # Make the API request
         response = requests.get(url)

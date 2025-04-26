@@ -10,7 +10,7 @@ from .serializers import (
 
 
 class SensorListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Sensor.objects.all()
+    queryset = Sensor.objects.all().order_by('id')
     serializer_class = SensorSerializer
 
 
