@@ -15,17 +15,17 @@ class SensorListCreateAPIView(generics.ListCreateAPIView):
 
 
 class SensorDataTempListCreateAPIView(generics.ListCreateAPIView):
-    queryset = SensorDataTemp.objects.all()
+    queryset = SensorDataTemp.objects.all().order_by('-time')
     serializer_class = SensorDataTempSerializer
 
 
 class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
-    queryset = SensorDataAir.objects.all()
+    queryset = SensorDataAir.objects.all().order_by('-time')
     serializer_class = SensorDataAirSerializer
 
 
 class SensorDataIndoorListCreateAPIView(generics.ListCreateAPIView):
-    queryset = SensorDataIndoor.objects.all()
+    queryset = SensorDataIndoor.objects.all().order_by('-time')
     serializer_class = SensorDataIndoorSerializer
 
 class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
