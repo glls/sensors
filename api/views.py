@@ -27,3 +27,13 @@ class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
 class SensorDataIndoorListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataIndoor.objects.all()
     serializer_class = SensorDataIndoorSerializer
+
+class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
+    serializer_class = SensorDataTempSerializer
+    pagination_class = None  # Disable pagination for this view
+
+    def get_object(self):
+        sensor_id = self.kwargs.get('sensor_id')
+        return SensorDataTemp.objects.filter(
+            sensor_id=sensor_id
+        ).order_by('-time').first()

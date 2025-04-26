@@ -12,13 +12,20 @@ load_dotenv()
 AIRROHR_SENSOR_ID = os.environ.get('AIRROHR_SENSOR_ID')
 AIRROHR_URL = os.environ.get('AIRROHR_URL')
 AIRROHR_INTERVAL = 145
+SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
+SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
 
 if AIRROHR_SENSOR_ID is None or AIRROHR_URL is None:
     print("Error: AIRROHR_SENSOR_ID or AIRROHR_URL not set in environment variables.")
     exit(1)
 
-SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
-SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
+if SEND_TO_TIMESCALEDB is False and SEND_TO_API is False:
+    print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
+    exit(2)
+
+if SEND_TO_TIMESCALEDB is True and SEND_TO_API is True:
+    print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
+    exit(3)
 
 
 def get_airrohr_data():
@@ -59,8 +66,8 @@ while True:
                   f"Pressure: {data['pressure']:.2f} hPa\t"
                   f"Signal: {data['signal']} dBm")
 
-            if SEND_TO_API:
-                send_air_data_to_api(
+            if SEND_TO_TIMESCALEDB:
+                send_air_data_to_timescaledb(
                     int(AIRROHR_SENSOR_ID),
                     data['pm10'],
                     data['pm25'],
@@ -69,9 +76,8 @@ while True:
                     data['pressure'],
                     int(data['signal'])
                 )
-
-            if SEND_TO_TIMESCALEDB:
-                send_air_data_to_timescaledb(
+            elif SEND_TO_API:
+                send_air_data_to_api(
                     int(AIRROHR_SENSOR_ID),
                     data['pm10'],
                     data['pm25'],

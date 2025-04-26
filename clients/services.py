@@ -79,7 +79,7 @@ def get_temp_data_last_timescaledb(sensor_id):
                                 user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
         cur = conn.cursor()
         sql = """
-              SELECT time, temperature, humidity
+              SELECT time, temperature, humidity, pressure
               FROM sensor_data_temp
               WHERE sensor_id = %s
               ORDER BY time DESC
@@ -93,6 +93,7 @@ def get_temp_data_last_timescaledb(sensor_id):
                 'time': row[0],
                 'temperature': row[1],
                 'humidity': row[2],
+                'pressure': row[3]
             }
         return None
 
@@ -116,13 +117,14 @@ def get_temp_data_last_api(sensor_id):
         A dictionary containing temperature data or None if not found
     """
     try:
-        # Construct the URL for the last temperature endpoint
-        api_base = os.environ.get('API_BASE_URL', '').rstrip('/')
-        if not api_base:
-            print("Error: API_BASE_URL not set in environment variables.")
+        # Get the API URL from environment variables
+        api_url = os.environ.get('API_TEMP_URL')
+        if not api_url:
+            print("Error: API_TEMP_URL not set in environment variables.")
             return None
 
-        url = f"{api_base}/sensors/{sensor_id}/temperature/last/"
+        # Construct the URL for the latest temperature endpoint
+        url = f"{api_url}/latest/{sensor_id}/"
 
         # Make the API request
         response = requests.get(url)

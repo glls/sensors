@@ -20,6 +20,14 @@ if ENS160_SENSOR_ID is None:
     print("Error: ENS160_SENSOR_ID not set in environment variables.")
     exit(1)
 
+if SEND_TO_TIMESCALEDB is False and SEND_TO_API is False:
+    print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
+    exit(2)
+
+if SEND_TO_TIMESCALEDB is True and SEND_TO_API is True:
+    print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
+    exit(3)
+
 '''
   # Select communication interface I2C, please comment out SPI interface. And vise versa.
   # I2C : For Fermion version, I2C communication address setting: 
@@ -62,20 +70,21 @@ else:
     last_data = None
 
 if last_data:
-    print(f"Last temperature sensor data: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} %")
+    print(
+        f"Last temperature from sensor data: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} % on {last_data['time']}")
     setup(last_data['temperature'], last_data['humidity'])
 else:
     setup()
 
 
 def validate_data(aqi, tvoc, e_co2):
-    if (aqi is None or aqi < 1 or aqi > 5):
+    if aqi is None or aqi < 1 or aqi > 5:
         print("Invalid AQI value")
         return False
-    if (tvoc is None or tvoc < 0 or tvoc > 65000):
+    if tvoc is None or tvoc < 0 or tvoc > 65000:
         print("Invalid TVOC value")
         return False
-    if (e_co2 is None or e_co2 < 400 or e_co2 > 65000):
+    if e_co2 is None or e_co2 < 400 or e_co2 > 65000:
         print("Invalid eCO2 value")
         return False
 
@@ -85,18 +94,17 @@ def validate_data(aqi, tvoc, e_co2):
 while True:
     try:
         sensor_status = sensor.get_ENS160_status()
-        aqi = sensor.get_AQI
-        tvoc = sensor.get_TVOC_ppb
-        e_co2 = sensor.get_ECO2_ppm
-        print(f"status: {sensor_status}\tAQI: {aqi} (1-5)\tTVOC: {tvoc} (ppb)\teCO2: {e_co2} (ppm)")
+        _aqi = sensor.get_AQI
+        _tvoc = sensor.get_TVOC_ppb
+        _e_co2 = sensor.get_ECO2_ppm
+        print(f"status: {sensor_status}\tAQI: {_aqi} (1-5)\tTVOC: {_tvoc} (ppb)\teCO2: {_e_co2} (ppm)")
         # Send indoor air quality data based on configuration
-        if validate_data(aqi, tvoc, e_co2):
-
-            if SEND_TO_API:
-                services.send_indoor_data_to_api(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+        if validate_data(_aqi, _tvoc, _e_co2):
 
             if SEND_TO_TIMESCALEDB:
-                services.send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, aqi, tvoc, e_co2)
+                services.send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, _aqi, _tvoc, _e_co2)
+            elif SEND_TO_API:
+                services.send_indoor_data_to_api(ENS160_SENSOR_ID, _aqi, _tvoc, _e_co2)
 
         time.sleep(ENS160_INTERVAL)
 

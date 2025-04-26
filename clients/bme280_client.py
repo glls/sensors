@@ -11,7 +11,6 @@ from services import send_temp_data_to_api, send_temp_data_to_timescaledb
 load_dotenv()
 
 SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
-
 SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
 # unique sensor ID
 BME280_SENSOR_ID = os.environ.get('BME280_SENSOR_ID')
@@ -23,6 +22,14 @@ BME280_INTERVAL = 55
 if BME280_SENSOR_ID is None:
     print("Error: BME280_SENSOR_ID not set in environment variables.")
     exit(1)
+
+if SEND_TO_TIMESCALEDB is False and SEND_TO_API is False:
+    print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
+    exit(2)
+
+if SEND_TO_TIMESCALEDB is True and SEND_TO_API is True:
+    print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
+    exit(3)
 
 # Initialize I2C bus
 try:
@@ -53,11 +60,10 @@ while True:
                   f"Pressure: {pressure:.2f} hPa")
 
             # Send data based on configuration
-            if SEND_TO_API:
-                send_temp_data_to_api(BME280_SENSOR_ID, temperature, humidity, pressure)
-
             if SEND_TO_TIMESCALEDB:
                 send_temp_data_to_timescaledb(BME280_SENSOR_ID, temperature, humidity, pressure)
+            elif SEND_TO_API:
+                send_temp_data_to_api(BME280_SENSOR_ID, temperature, humidity, pressure)
 
         time.sleep(BME280_INTERVAL)
 
