@@ -1,116 +1,158 @@
 import os
+import time
+import sys
+from typing import Dict, Optional, Any
 
 from dotenv import load_dotenv
 
-from DFRobot_ENS160 import *
 import services
+from DFRobot_ENS160 import DFRobot_ENS160_I2C, ENS160_STANDARD_MODE
 
-# Load environment variables from .env file
-load_dotenv()
+def load_config() -> Dict[str, Any]:
+    """Load and validate environment configuration."""
+    load_dotenv()
 
-SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
-SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
-ENS160_SENSOR_ID = os.environ.get('ENS160_SENSOR_ID')
-BME280_SENSOR_ID = os.environ.get('BME280_SENSOR_ID')
+    config = {
+        'send_to_timescaledb': os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true',
+        'send_to_api': os.environ.get('SEND_TO_API', 'False').lower() == 'true',
+        'ens160_sensor_id': os.environ.get('ENS160_SENSOR_ID'),
+        'bme280_sensor_id': os.environ.get('BME280_SENSOR_ID'),
+        'ens160_interval': 55
+    }
 
-# delay time for sensor readings (in seconds)
-ENS160_INTERVAL = 55
+    if config['ens160_sensor_id'] is None:
+        print("Error: ENS160_SENSOR_ID not set in environment variables.")
+        sys.exit(1)
 
-if ENS160_SENSOR_ID is None:
-    print("Error: ENS160_SENSOR_ID not set in environment variables.")
-    exit(1)
+    if not config['send_to_timescaledb'] and not config['send_to_api']:
+        print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
+        sys.exit(2)
 
-if SEND_TO_TIMESCALEDB is False and SEND_TO_API is False:
-    print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
-    exit(2)
+    if config['send_to_timescaledb'] and config['send_to_api']:
+        print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
+        sys.exit(3)
 
-if SEND_TO_TIMESCALEDB is True and SEND_TO_API is True:
-    print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
-    exit(3)
+    return config
 
-'''
-  # Select communication interface I2C, please comment out SPI interface. And vise versa.
-  # I2C : For Fermion version, I2C communication address setting: 
-  #         connect SDO pin to GND, I2C address is 0×52 now;
-  #         connect SDO pin to VCC(3v3), I2C address is 0x53 now
-  # SPI : Set up digital pin according to the on-board pin connected with SPI chip-select pin.
-'''
-sensor = DFRobot_ENS160_I2C(i2c_addr=0x53, bus=1)
-
-
-def setup(ambient_temp=25.0, ambient_hum=50.0):
-    while (sensor.begin() == False):
-        print('Please check that the device is properly connected')
-        time.sleep(3)
-    print("sensor begin successfully!!!")
-
-    '''
-      # Configure power mode
-      # mode Configurable power mode:
-      #   ENS160_SLEEP_MODE: DEEP SLEEP mode (low power standby)
-      #   ENS160_IDLE_MODE: IDLE mode (low-power)
-      #   ENS160_STANDARD_MODE: STANDARD Gas Sensing Modes
-    '''
-    sensor.set_PWR_mode(ENS160_STANDARD_MODE)
-
-    '''
-      # Users write ambient temperature and relative humidity into ENS160 for calibration and compensation of the measured gas data.
-      # ambient_temp Compensate the current ambient temperature, float type, unit: C
-      # relative_humidity Compensate the current ambient humidity, float type, unit: %rH
-    '''
-    sensor.set_temp_and_hum(ambient_temp, ambient_hum)
-
-
-# Get the last sensor data from BME280_SENSOR_ID in TimescaleDB
-if SEND_TO_TIMESCALEDB:
-    last_data = services.get_temp_data_last_timescaledb(BME280_SENSOR_ID)
-elif SEND_TO_API:
-    last_data = services.get_temp_data_last_api(BME280_SENSOR_ID)
-else:
-    last_data = None
-
-if last_data:
-    print(
-        f"Last temperature from sensor data: {last_data['temperature']:.4f} °C\t {last_data['humidity']:.4f} % on {last_data['time']}")
-    setup(last_data['temperature'], last_data['humidity'])
-else:
-    setup()
-
-
-def validate_data(aqi, tvoc, e_co2):
+def validate_data(aqi: int, tvoc: int, e_co2: int) -> bool:
+    """Validate sensor data is within acceptable ranges."""
     if aqi is None or aqi < 1 or aqi > 5:
         print("Invalid AQI value")
         return False
+
     if tvoc is None or tvoc < 0 or tvoc > 65000:
         print("Invalid TVOC value")
         return False
+
     if e_co2 is None or e_co2 < 400 or e_co2 > 65000:
         print("Invalid eCO2 value")
         return False
 
     return True
 
+def setup_sensor(sensor: DFRobot_ENS160_I2C, ambient_temp: float = 25.0, ambient_hum: float = 50.0) -> bool:
+    """Initialize the ENS160 sensor with provided temperature and humidity."""
+    max_attempts = 5
+    attempts = 0
 
-while True:
+    while attempts < max_attempts:
+        if sensor.begin():
+            print("Sensor initialized successfully")
+            break
+
+        print(f"Failed to initialize sensor. Attempt {attempts + 1} of {max_attempts}")
+        attempts += 1
+        time.sleep(3)
+
+    if attempts >= max_attempts:
+        print(f"Failed to initialize sensor after {max_attempts} attempts")
+        return False
+
+    sensor.set_PWR_mode(ENS160_STANDARD_MODE)
+    sensor.set_temp_and_hum(ambient_temp, ambient_hum)
+    print(f"Sensor configured with temp: {ambient_temp:.1f}°C, humidity: {ambient_hum:.1f}%")
+
+    return True
+
+def get_environmental_data(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Get the latest temperature and humidity data from BME280 sensor."""
+    bme280_id = config['bme280_sensor_id']
+    if not bme280_id:
+        print("BME280_SENSOR_ID not set, using default values")
+        return None
+
     try:
-        sensor_status = sensor.get_ENS160_status()
-        _aqi = sensor.get_AQI
-        _tvoc = sensor.get_TVOC_ppb
-        _e_co2 = sensor.get_ECO2_ppm
-        print(f"status: {sensor_status}\tAQI: {_aqi} (1-5)\tTVOC: {_tvoc} (ppb)\teCO2: {_e_co2} (ppm)")
-        # Send indoor air quality data based on configuration
-        if validate_data(_aqi, _tvoc, _e_co2):
+        if config['send_to_timescaledb']:
+            data = services.get_temp_data_last_timescaledb(bme280_id)
+        elif config['send_to_api']:
+            data = services.get_temp_data_last_api(bme280_id)
+        else:
+            return None
 
-            if SEND_TO_TIMESCALEDB:
-                services.send_indoor_data_to_timescaledb(ENS160_SENSOR_ID, _aqi, _tvoc, _e_co2)
-            elif SEND_TO_API:
-                services.send_indoor_data_to_api(ENS160_SENSOR_ID, _aqi, _tvoc, _e_co2)
+        if data:
+            print(f"Retrieved environmental data: {data['temperature']:.2f}°C, {data['humidity']:.2f}% on {data['time']}")
+        return data
+    except Exception as e:
+        print(f"Failed to retrieve environmental data: {str(e)}")
+        return None
 
-        time.sleep(ENS160_INTERVAL)
+def send_data(config: Dict[str, Any], aqi: int, tvoc: int, e_co2: int) -> None:
+    """Send sensor data to the configured destination."""
+    sensor_id = config['ens160_sensor_id']
+
+    try:
+        if config['send_to_timescaledb']:
+            services.send_indoor_data_to_timescaledb(sensor_id, aqi, tvoc, e_co2)
+        elif config['send_to_api']:
+            services.send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2)
+    except Exception as e:
+        print(f"Failed to send data: {str(e)}")
+
+def main():
+    """Main execution function."""
+    config = load_config()
+    sensor = DFRobot_ENS160_I2C(i2c_addr=0x53, bus=1)
+
+    # Initial setup
+    env_data = get_environmental_data(config)
+    if env_data:
+        setup_success = setup_sensor(sensor, env_data['temperature'], env_data['humidity'])
+    else:
+        setup_success = setup_sensor(sensor)
+
+    if not setup_success:
+        print("Failed to set up the sensor. Exiting.")
+        sys.exit(4)
+
+    try:
+        while True:
+            # Update environmental data before each measurement
+            env_data = get_environmental_data(config)
+            if env_data:
+                sensor.set_temp_and_hum(env_data['temperature'], env_data['humidity'])
+
+            try:
+                # Get sensor readings
+                sensor_status = sensor.get_ENS160_status()
+                aqi = sensor.get_AQI
+                tvoc = sensor.get_TVOC_ppb
+                e_co2 = sensor.get_ECO2_ppm
+
+                print(f"Status: {sensor_status}, AQI: {aqi} (1-5), TVOC: {tvoc} ppb, eCO2: {e_co2} ppm")
+
+                # Validate and send data
+                if validate_data(aqi, tvoc, e_co2):
+                    send_data(config, aqi, tvoc, e_co2)
+
+                # Wait for next reading
+                time.sleep(config['ens160_interval'])
+
+            except Exception as e:
+                print(f"Error during sensor reading: {str(e)}")
+                time.sleep(10)
 
     except KeyboardInterrupt:
-        print('Program stopped')
-        break
-    except Exception as e:
-        print('An unexpected error occurred:', str(e))
-        break
+        print("Program stopped by user")
+
+if __name__ == "__main__":
+    main()

@@ -1,67 +1,136 @@
 import os
 import time
+import sys
+from typing import Dict, Any, Optional, Tuple
 
 import adafruit_dht
 import board
 from dotenv import load_dotenv
 
-from services import send_temp_data_to_api, send_temp_data_to_timescaledb
+import services
 
-# Load environment variables from .env file
-load_dotenv()
 
-# database connection details
-SEND_TO_TIMESCALEDB = os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true'
-SEND_TO_API = os.environ.get('SEND_TO_API', 'False').lower() == 'true'
+def load_config() -> Dict[str, Any]:
+    """Load and validate environment configuration."""
+    load_dotenv()
 
-# unique sensor ID
-DHT22_SENSOR_ID = os.environ.get('DHT22_SENSOR_ID')
-# delay time for sensor readings (in seconds)
-DHT22_INTERVAL = 55
+    config = {
+        'send_to_timescaledb': os.environ.get('SEND_TO_TIMESCALEDB', 'False').lower() == 'true',
+        'send_to_api': os.environ.get('SEND_TO_API', 'False').lower() == 'true',
+        'dht22_sensor_id': os.environ.get('DHT22_SENSOR_ID'),
+        'dht22_pin': board.D22,  # Default GPIO pin for DHT22
+        'dht22_interval': 55     # Default delay time in seconds
+    }
 
-if DHT22_SENSOR_ID is None:
-    print("Error: DHT_SENSOR_ID not set in environment variables.")
-    exit(1)
+    if config['dht22_sensor_id'] is None:
+        print("Error: DHT22_SENSOR_ID not set in environment variables.")
+        sys.exit(1)
 
-if SEND_TO_TIMESCALEDB is False and SEND_TO_API is False:
-    print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
-    exit(2)
+    if not config['send_to_timescaledb'] and not config['send_to_api']:
+        print("Error: SEND_TO_TIMESCALEDB or SEND_TO_API must be set to True in environment variables.")
+        sys.exit(2)
 
-if SEND_TO_TIMESCALEDB is True and SEND_TO_API is True:
-    print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
-    exit(3)
+    if config['send_to_timescaledb'] and config['send_to_api']:
+        print("Error: SEND_TO_TIMESCALEDB and SEND_TO_API cannot be both True in environment variables.")
+        sys.exit(3)
 
-# You can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
-# This may be necessary on a Linux single board computer like the Raspberry Pi,
-# but it will not work in CircuitPython.
-dhtDevice = adafruit_dht.DHT22(board.D22, use_pulseio=False)
+    return config
 
-while True:
+
+def setup_sensor(pin):
+    """Initialize the DHT22 sensor."""
     try:
-        # Print the values to the serial port
-        temperature = dhtDevice.temperature
-        humidity = dhtDevice.humidity
-
-        # Print the readings
-        print(f"Temperature: {temperature:.2f} °C\t"
-              f"Humidity: {humidity:.2f} %")
-
-        if SEND_TO_TIMESCALEDB:
-            send_temp_data_to_timescaledb(DHT22_SENSOR_ID, temperature, humidity)
-        elif SEND_TO_API:
-            send_temp_data_to_api(DHT22_SENSOR_ID, temperature, humidity)
-
-        time.sleep(DHT22_INTERVAL)
-
-    except RuntimeError as error:
-        # Errors happen fairly often, DHT's are hard to read, just keep going
-        print(error.args[0])
-        time.sleep(2.0)
-        continue
-    except KeyboardInterrupt:
-        print('Program stopped')
-        break
+        # Using use_pulseio=False for Raspberry Pi compatibility
+        sensor = adafruit_dht.DHT22(pin, use_pulseio=False)
+        print("DHT22 sensor initialized successfully")
+        return sensor
     except Exception as e:
-        dhtDevice.exit()
-        print('An unexpected error occurred:', str(e))
-        break
+        print(f"Error initializing DHT22 sensor: {e}")
+        return None
+
+
+def read_sensor_data(sensor: adafruit_dht.DHT22) -> Optional[Dict[str, float]]:
+    """Read data from the DHT22 sensor."""
+    try:
+        temperature = sensor.temperature
+        humidity = sensor.humidity
+
+        return {
+            'temperature': temperature,
+            'humidity': humidity
+        }
+    except RuntimeError:
+        # Errors happen fairly often with DHT sensors, just return None
+        return None
+
+
+def validate_data(data: Dict[str, float]) -> bool:
+    """Validate sensor data is within acceptable ranges."""
+    if data['temperature'] < -40 or data['temperature'] > 80:
+        print(f"Invalid temperature value: {data['temperature']}")
+        return False
+
+    if data['humidity'] < 0 or data['humidity'] > 100:
+        print(f"Invalid humidity value: {data['humidity']}")
+        return False
+
+    return True
+
+
+def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
+    """Send sensor data to the configured destination."""
+    sensor_id = config['dht22_sensor_id']
+
+    try:
+        if config['send_to_timescaledb']:
+            services.send_temp_data_to_timescaledb(
+                sensor_id,
+                data['temperature'],
+                data['humidity']
+            )
+        elif config['send_to_api']:
+            services.send_temp_data_to_api(
+                sensor_id,
+                data['temperature'],
+                data['humidity']
+            )
+    except Exception as e:
+        print(f"Failed to send data: {str(e)}")
+
+
+def main():
+    """Main execution function."""
+    config = load_config()
+    sensor = setup_sensor(config['dht22_pin'])
+
+    if not sensor:
+        print("Cannot continue without working sensor. Exiting.")
+        sys.exit(4)
+
+    try:
+        while True:
+            # Read sensor data
+            data = read_sensor_data(sensor)
+
+            if data:
+                print(f"Temperature: {data['temperature']:.2f} °C\t"
+                      f"Humidity: {data['humidity']:.2f} %")
+
+                # Validate and send data
+                if validate_data(data):
+                    send_data(config, data)
+            else:
+                print("Failed to read from DHT sensor, retrying...")
+
+            # Wait for next reading
+            time.sleep(config['dht22_interval'])
+
+    except KeyboardInterrupt:
+        print("Program stopped by user")
+    except Exception as e:
+        sensor.exit()
+        print(f"An unexpected error occurred: {str(e)}")
+
+
+if __name__ == "__main__":
+    main()
