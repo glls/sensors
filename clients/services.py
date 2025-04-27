@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from typing import Dict, Any, Optional
 
 import psycopg2
 import pytz
@@ -7,18 +8,31 @@ import requests
 from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
-# Load environment variables from .env file
-load_dotenv()
 
-# Database connection details
-TIMESCALEDB_HOST = os.environ.get('TIMESCALEDB_HOST')
-TIMESCALEDB_PORT = os.environ.get('TIMESCALEDB_PORT', '5432')
-TIMESCALEDB_DBNAME = os.environ.get('TIMESCALEDB_DBNAME')
-TIMESCALEDB_USER = os.environ.get('TIMESCALEDB_USER')
-TIMESCALEDB_PASSWORD = os.environ.get('TIMESCALEDB_PASSWORD')
-API_TEMP_URL = os.environ.get('API_TEMP_URL')
-API_INDOOR_URL = os.environ.get('API_INDOOR_URL')
-API_AIR_URL = os.environ.get('API_AIR_URL')
+def load_config() -> Dict[str, Any]:
+    """Load environment configuration for services."""
+    # Load environment variables from .env file
+    load_dotenv()
+
+    config = {
+        # Database connection details
+        'timescaledb_host': os.environ.get('TIMESCALEDB_HOST'),
+        'timescaledb_port': os.environ.get('TIMESCALEDB_PORT', '5432'),
+        'timescaledb_dbname': os.environ.get('TIMESCALEDB_DBNAME'),
+        'timescaledb_user': os.environ.get('TIMESCALEDB_USER'),
+        'timescaledb_password': os.environ.get('TIMESCALEDB_PASSWORD'),
+
+        # API endpoints
+        'api_temp_url': os.environ.get('API_TEMP_URL'),
+        'api_indoor_url': os.environ.get('API_INDOOR_URL'),
+        'api_air_url': os.environ.get('API_AIR_URL')
+    }
+
+    return config
+
+
+# Load configuration once at module level
+CONFIG = load_config()
 
 
 def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None):
@@ -30,7 +44,7 @@ def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None):
             "pressure": pressure,
             "humidity": humidity
         }
-        response = requests.post(API_TEMP_URL, json=payload)
+        response = requests.post(CONFIG['api_temp_url'], json=payload)
         if response.status_code == 201:
             print("Data sent to API successfully:", response.json())
         else:
@@ -40,14 +54,20 @@ def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None):
 
 
 def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=None):
-    if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
+    if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
+                CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return
 
     conn = None
     try:
-        conn = psycopg2.connect(host=TIMESCALEDB_HOST, port=TIMESCALEDB_PORT, dbname=TIMESCALEDB_DBNAME,
-                                user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
+        conn = psycopg2.connect(
+            host=CONFIG['timescaledb_host'],
+            port=CONFIG['timescaledb_port'],
+            dbname=CONFIG['timescaledb_dbname'],
+            user=CONFIG['timescaledb_user'],
+            password=CONFIG['timescaledb_password']
+        )
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
@@ -69,14 +89,20 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
 
 
 def get_temp_data_last_timescaledb(sensor_id):
-    if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
+    if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
+                CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return None
 
     conn = None
     try:
-        conn = psycopg2.connect(host=TIMESCALEDB_HOST, port=TIMESCALEDB_PORT, dbname=TIMESCALEDB_DBNAME,
-                                user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
+        conn = psycopg2.connect(
+            host=CONFIG['timescaledb_host'],
+            port=CONFIG['timescaledb_port'],
+            dbname=CONFIG['timescaledb_dbname'],
+            user=CONFIG['timescaledb_user'],
+            password=CONFIG['timescaledb_password']
+        )
         cur = conn.cursor()
         sql = """
               SELECT time, temperature, humidity, pressure
@@ -117,8 +143,7 @@ def get_temp_data_last_api(sensor_id):
         A dictionary containing temperature data or None if not found
     """
     try:
-        # Get the API URL from environment variables
-        api_url = os.environ.get('API_TEMP_URL')
+        api_url = CONFIG['api_temp_url']
         if not api_url:
             print("Error: API_TEMP_URL not set in environment variables.")
             return None
@@ -161,7 +186,7 @@ def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
             "tvoc": tvoc,
             "eco2": e_co2
         }
-        response = requests.post(API_INDOOR_URL, json=payload)
+        response = requests.post(CONFIG['api_indoor_url'], json=payload)
         if response.status_code == 201:
             print("Data sent to API successfully:", response.json())
         else:
@@ -171,14 +196,20 @@ def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
 
 
 def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
-    if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
+    if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
+                CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return
 
     conn = None
     try:
-        conn = psycopg2.connect(host=TIMESCALEDB_HOST, port=TIMESCALEDB_PORT, dbname=TIMESCALEDB_DBNAME,
-                                user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
+        conn = psycopg2.connect(
+            host=CONFIG['timescaledb_host'],
+            port=CONFIG['timescaledb_port'],
+            dbname=CONFIG['timescaledb_dbname'],
+            user=CONFIG['timescaledb_user'],
+            password=CONFIG['timescaledb_password']
+        )
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
@@ -211,7 +242,7 @@ def send_air_data_to_api(sensor_id, pm10, pm25, temperature=None, humidity=None,
             "pressure": pressure,
             "signal": signal
         }
-        response = requests.post(API_AIR_URL, json=payload)
+        response = requests.post(CONFIG['api_air_url'], json=payload)
         if response.status_code == 201:
             print("Data sent to API successfully:", response.json())
         else:
@@ -221,14 +252,20 @@ def send_air_data_to_api(sensor_id, pm10, pm25, temperature=None, humidity=None,
 
 
 def send_air_data_to_timescaledb(sensor_id, pm10, pm25, temperature=None, humidity=None, pressure=None, signal=None):
-    if not all([TIMESCALEDB_HOST, TIMESCALEDB_DBNAME, TIMESCALEDB_USER, TIMESCALEDB_PASSWORD]):
+    if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
+                CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
         return
 
     conn = None
     try:
-        conn = psycopg2.connect(host=TIMESCALEDB_HOST, port=TIMESCALEDB_PORT, dbname=TIMESCALEDB_DBNAME,
-                                user=TIMESCALEDB_USER, password=TIMESCALEDB_PASSWORD)
+        conn = psycopg2.connect(
+            host=CONFIG['timescaledb_host'],
+            port=CONFIG['timescaledb_port'],
+            dbname=CONFIG['timescaledb_dbname'],
+            user=CONFIG['timescaledb_user'],
+            password=CONFIG['timescaledb_password']
+        )
         cur = conn.cursor()
         now_utc = datetime.now(pytz.utc).isoformat()
         sql = """
