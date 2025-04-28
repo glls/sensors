@@ -1,46 +1,39 @@
 # sensors
 
+## Sensor Data Collection System
+
+This repository contains a system for collecting and storing sensor data from various environmental sensors. The system
+is designed to be modular, allowing for easy integration of new sensors and data sources.
+
 ## Architecture
 
 The architecture of the system consists of these main components:
 
 1. Clients
-    1. **BME280 Sensor**: This component is responsible for reading data from the BME280 sensor and sending it to a
-       server. It runs on a Raspberry Pi or similar device.
-    2. **AM2302 Sensor**: This component is responsible for reading data from the AM2302 sensor and sending it to a
-       server. It runs on a Raspberry Pi or similar device.
-    3. **ENS160 Sensor**: This component is responsible for reading data from the ENS160 sensor and sending it to a
-       server. It runs on a Raspberry Pi or similar device.
-    4. **AIRROHR**: This component is responsible for reading data from the AIRROHR device and sending it to a server.
-2. **Server**: This component receives the data from the sensor clients and stores it in a database. It can be a local
-   server or a cloud-based server.
-3. **Database**: The database stores the sensor data for later retrieval and analysis. It can be a local database or a
-   cloud-based database.
-4. **Web Interface**: The web interface allows users to view the sensor data in real-time. It can be a local web
-   application or a cloud-based web application.
-5. **Mobile Application**: The mobile application allows users to view the sensor data on their mobile devices. It can
-   be a native mobile application or a web-based mobile application.
-6. **Notification System**: The notification system sends alerts to users when certain conditions are met, such as high
-   temperature or humidity levels. It can be a local notification system or a cloud-based notification system.
-7. **Data Visualization**: The data visualization component allows users to visualize the sensor data in various
-   formats, such as graphs and charts. It can be a local data visualization tool or a cloud-based data visualization
-   tool.
+    1. **BME280 Sensor**: Reads temperature, humidity, and pressure data.
+    2. **AM2302 Sensor**: Reads temperature and humidity data.
+    3. **ENS160 Sensor**: Reads indoor air quality data (AQI, TVOC, eCO2).
+    4. **AIRROHR**: Reads particulate matter (PM10, PM2.5) data.
+2. Servers
+    1. **API**: A Django REST API that receives data from the sensor clients and stores it in a database.
+    2. **TimescaleDB**: A time-series database built on PostgreSQL for storing sensor data.
+3. Web Interface: Allows users to view sensor data in real-time.
 
 ## Clients
 
-The clients are responsible for reading data from the sensors and sending it to the server.
+The clients read data from the sensors and send it to the server.
 [Readme](clients/README.md) for more information.
 
 ## Servers
 
-There are two servers, the REST API and the database server.
-
 ### API
 
-Django REST API server that receives data from the sensor clients and stores it in a database.
+Django REST API (based on DRF) that receives data from the sensor clients and stores it in a database.
 
 ### TimescaleDB
 
-TimescaleDB is a time-series database built on PostgreSQL. It is used to store the sensor data for later retrieval and
-analysis. It can be a local database or a cloud-based database.
+TimescaleDB is a time-series database built on PostgreSQL for storing sensor data.
 Runs with docker on UNRAID server.
+
+## Web Interface
+The web interface allows users to view sensor data in real-time.
