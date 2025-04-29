@@ -15,5 +15,4 @@ urlpatterns = [
          name='temp-data-latest'),
     path('sensors/air/data/', SensorDataAirListCreateAPIView.as_view(), name='air-data'),
     path('sensors/indoor/data/', SensorDataIndoorListCreateAPIView.as_view(), name='indoor-data'),
-
 ]
