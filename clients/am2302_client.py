@@ -19,7 +19,7 @@ def load_config() -> Dict[str, Any]:
         'send_to_api': os.environ.get('SEND_TO_API', 'False').lower() == 'true',
         'dht22_sensor_id': os.environ.get('DHT22_SENSOR_ID'),
         'dht22_pin': board.D22,  # Default GPIO pin for DHT22
-        'dht22_interval': 55     # Default delay time in seconds
+        'dht22_interval': 55  # Default delay time in seconds
     }
 
     if config['dht22_sensor_id'] is None:
@@ -121,6 +121,8 @@ def main():
                     send_data(config, data)
             else:
                 print("Failed to read from DHT sensor, retrying...")
+                time.sleep(2)
+                continue
 
             # Wait for next reading
             time.sleep(config['dht22_interval'])
