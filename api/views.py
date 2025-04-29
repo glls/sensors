@@ -1,6 +1,13 @@
+import os
+
+import requests
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from dotenv import load_dotenv
 from rest_framework import generics
+from rest_framework.exceptions import APIException
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.models import Sensor, SensorDataTemp, SensorDataAir, SensorDataIndoor
 from .serializers import (
@@ -10,19 +17,7 @@ from .serializers import (
     SensorDataIndoorSerializer,
 )
 
-
-def broadcast_sensor_data(data):
-    """
-    Broadcast sensor data to the WebSocket group for all sensors.
-    """
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        'sensors',
-        {
-            'type': 'sensor_update',
-            'data': data
-        }
-    )
+LAT, LON = 40.678967, 22.917712
 
 
 class SensorListCreateAPIView(generics.ListCreateAPIView):
@@ -93,3 +88,47 @@ class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
         return SensorDataTemp.objects.filter(
             sensor_id=sensor_id
         ).order_by('-time').first()
+
+
+def broadcast_sensor_data(data):
+    """
+    Broadcast sensor data to the WebSocket group for all sensors.
+    """
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)('sensors', {'type': 'sensor_update', 'data': data})
+
+
+class WeatherDataAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+
+        load_dotenv()
+        API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
+
+        if not API_KEY:
+            raise APIException("OPENWEATHERMAP_API_KEY is not configured.")
+
+        url = f'https://api.openweathermap.org/data/2.5/weather?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric'
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            raise APIException(f"Failed to fetch weather data: {response.status_code} {response.text}")
+
+        return Response(response.json())
+
+
+class AirPollutionDataAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+
+        load_dotenv()
+        API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
+
+        if not API_KEY:
+            raise APIException("OPENWEATHERMAP_API_KEY is not configured.")
+
+        url = f'https://api.openweathermap.org/data/2.5/air_pollution?lat={LAT}&lon={LON}&appid={API_KEY}'
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            raise APIException(f"Failed to fetch air pollution data: {response.status_code} {response.text}")
+
+        return Response(response.json())
