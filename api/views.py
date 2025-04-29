@@ -11,17 +11,15 @@ from .serializers import (
 )
 
 
-def broadcast_sensor_data(sensor_id, data):
+def broadcast_sensor_data(data):
     """
-    Broadcast sensor data to the WebSocket group for the specific sensor.
+    Broadcast sensor data to the WebSocket group for all sensors.
     """
-    print(f"Broadcasting data to sensor {sensor_id}: {data}")
     channel_layer = get_channel_layer()
-    logger.info(f"Broadcasting data to sensor {sensor_id}: {data}")
     async_to_sync(channel_layer.group_send)(
-        f'sensor_data_{sensor_id}',
+        'sensors',
         {
-            'type': 'send_sensor_data',
+            'type': 'sensor_update',
             'data': data
         }
     )
@@ -31,6 +29,7 @@ class SensorListCreateAPIView(generics.ListCreateAPIView):
     queryset = Sensor.objects.all().order_by('id')
     serializer_class = SensorSerializer
 
+
 class SensorDataTempListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataTemp.objects.all().order_by('-time')
     serializer_class = SensorDataTempSerializer
@@ -38,13 +37,14 @@ class SensorDataTempListCreateAPIView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         instance = serializer.save()
         data = {
-            'sensor_id': instance.sensor_id.id,
+            'sensor_id': instance.sensor_id,
+            'type': 'temperature',
             'temperature': instance.temperature,
             'humidity': instance.humidity,
             'pressure': instance.pressure,
             'time': instance.time.isoformat(),
         }
-        broadcast_sensor_data(instance.sensor_id.id, data)
+        broadcast_sensor_data(data)
 
 
 class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
@@ -52,12 +52,10 @@ class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = SensorDataAirSerializer
 
     def perform_create(self, serializer):
-        # Save the new data
         instance = serializer.save()
-
-        # Prepare the data for broadcasting
         data = {
-            'sensor_id': instance.sensor_id.id,
+            'sensor_id': instance.sensor_id,
+            'type': 'air',
             'pm10': instance.p1,
             'pm25': instance.p2,
             'temperature': instance.temperature,
@@ -66,9 +64,8 @@ class SensorDataAirListCreateAPIView(generics.ListCreateAPIView):
             'signal': instance.signal,
             'time': instance.time.isoformat(),
         }
+        broadcast_sensor_data(data)
 
-        # Broadcast the data via WebSocket
-        broadcast_sensor_data(instance.sensor_id.id, data)
 
 class SensorDataIndoorListCreateAPIView(generics.ListCreateAPIView):
     queryset = SensorDataIndoor.objects.all().order_by('-time')
@@ -77,13 +74,15 @@ class SensorDataIndoorListCreateAPIView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         instance = serializer.save()
         data = {
-            'sensor_id': instance.sensor_id.id,
+            'sensor_id': instance.sensor_id,
+            'type': 'indoor',
             'aqi': instance.aqi,
             'tvoc': instance.tvoc,
             'eco2': instance.eco2,
             'time': instance.time.isoformat(),
         }
-        broadcast_sensor_data(instance.sensor_id.id, data)
+        broadcast_sensor_data(data)
+
 
 class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
     serializer_class = SensorDataTempSerializer

@@ -1,6 +1,6 @@
 from django.urls import path
-from .consumers import SensorDataConsumer
+from .consumers import SensorsDataConsumer
 
 websocket_urlpatterns = [
-    path('ws/sensor_data/<int:sensor_id>/', SensorDataConsumer.as_asgi()),
+    path('ws/sensor_data/', SensorsDataConsumer.as_asgi()),
 ]
