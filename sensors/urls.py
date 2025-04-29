@@ -28,8 +28,6 @@ def home(request):
 
     # Fetch latest indoor data from the ens160 sensor
     latest_indoor_data = SensorDataIndoor.objects.order_by('-time').first()
-    print(latest_indoor_data)
-
 
     # Fetch latest temperature data from sensors 1 and 2
     latest_temp_sensor_1 = SensorDataTemp.objects.filter(sensor_id=1).order_by('-time').first()
