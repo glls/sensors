@@ -49,7 +49,6 @@ coverage.xml
 *.log
 *.pot
 media
-static
 staticfiles/
 *.sqlite3
 *.db

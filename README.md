@@ -37,3 +37,10 @@ Runs with docker on UNRAID server.
 
 ## Web Interface
 The web interface allows users to view sensor data in real-time.
+
+
+```sh
+ uvicorn sensors.asgi:application --host 0.0.0.0 --port 8000 --reload --lifespan=off
+```
+
+ 

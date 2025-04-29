@@ -8,6 +8,7 @@ from .views import (
     SensorDataIndoorListCreateAPIView,
     WeatherDataAPIView,
     AirPollutionDataAPIView,
+    ToggleSchedulerAPIView,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('sensors/indoor/data/', SensorDataIndoorListCreateAPIView.as_view(), name='indoor-data'),
     path('weather/', WeatherDataAPIView.as_view(), name='weather-data'),
     path('air-pollution/', AirPollutionDataAPIView.as_view(), name='air-pollution-data'),
+    path('scheduler/', ToggleSchedulerAPIView.as_view(), name='toggle_scheduler'),
 ]
