@@ -100,41 +100,51 @@ class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
 
 
 
+# api/views.py
 class WeatherDataAPIView(APIView):
     def get(self, request, *args, **kwargs):
-
         load_dotenv()
         API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
 
         if not API_KEY:
-            raise APIException("OPENWEATHERMAP_API_KEY is not configured.")
+            return Response(
+                {"error": "Weather API key is missing. Please configure it."},
+                status=status.HTTP_200_OK
+            )
 
         url = f'https://api.openweathermap.org/data/2.5/weather?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric'
         response = requests.get(url)
 
         if response.status_code != 200:
-            raise APIException(f"Failed to fetch weather data: {response.status_code} {response.text}")
+            return Response(
+                {"error": f"Failed to fetch weather data: {response.status_code} {response.text}"},
+                status=status.HTTP_200_OK
+            )
 
         return Response(response.json())
 
 
 class AirPollutionDataAPIView(APIView):
     def get(self, request, *args, **kwargs):
-
         load_dotenv()
         API_KEY = os.getenv('OPENWEATHERMAP_API_KEY')
 
         if not API_KEY:
-            raise APIException("OPENWEATHERMAP_API_KEY is not configured.")
+            return Response(
+                {"error": "Air pollution API key is missing. Please configure it."},
+                status=status.HTTP_200_OK
+            )
 
         url = f'https://api.openweathermap.org/data/2.5/air_pollution?lat={LAT}&lon={LON}&appid={API_KEY}'
         response = requests.get(url)
 
         if response.status_code != 200:
-            raise APIException(f"Failed to fetch air pollution data: {response.status_code} {response.text}")
+            return Response(
+                {"error": f"Failed to fetch air pollution data: {response.status_code} {response.text}"},
+                status=status.HTTP_200_OK
+            )
 
         return Response(response.json())
-
 class ToggleSchedulerAPIView(APIView):
     def get(self, request, *args, **kwargs):
         global scheduler_enabled
