@@ -29,29 +29,29 @@ boot, follow these steps:
 
 1. **Create the service file:** Create a new file named `bme280_client.service` in the systemd service directory,
    typically located at `/etc/systemd/system/`. You will need root privileges for this:
-   ```bash
-   sudo nano /etc/systemd/system/bme280_client.service
-   ```
+```bash
+sudo nano /etc/systemd/system/bme280_client.service
+```
 
 2. **Paste the service definition:** Copy and paste the following content into the `bme280_client.service` file. **Make
    sure to replace the placeholder values** with your actual setup:
 
-   ```ini
-   [Unit]
-   Description=BME280 Sensor Data Client
-   After=network.target
+```ini
+[Unit]
+Description=BME280 Sensor Data Client
+After=network.target
 
-   [Service]
-   User=your_user  # Replace with the user you want to run the script as
-   WorkingDirectory=/path/to/your/script/directory  # Replace with the actual path
-   ExecStart=/usr/bin/python3 /path/to/your/script/directory/bme280_client.py  # Replace with the full path to your script
-   Restart=on-failure
-   StandardOutput=journal
-   StandardError=journal
-   Environment="SEND_TO_TIMESCALEDB=True"
+[Service]
+User=your_user  # Replace with the user you want to run the script as
+WorkingDirectory=/path/to/your/script/directory  # Replace with the actual path
+ExecStart=/usr/bin/python3 /path/to/your/script/directory/bme280_client.py  # Replace with the full path to your script
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+Environment="SEND_TO_TIMESCALEDB=True"
 
-   [Install]
-   WantedBy=multi-user.target
+[Install]
+WantedBy=multi-user.target
    ```
 
 3. **Edit the service file:**
@@ -64,26 +64,30 @@ boot, follow these steps:
 4. **Save and close the file.**
 
 5. **Reload systemd configuration:** Apply the changes by reloading the systemd manager configuration:
-   ```bash
-   sudo systemctl daemon-reload
-   ```
+```bash
+sudo systemctl daemon-reload
+```
 
 6. **Enable the service to start on boot:**
-   ```bash
-   sudo systemctl enable bme280_client.service
-   ```
+```bash
+sudo systemctl enable bme280_client.service
+```
 
 7. **Start the service immediately:**
-   ```bash
-   sudo systemctl start bme280_client.service
-   ```
+```bash
+sudo systemctl start bme280_client.service
+```
 
 8. **Check the service status:** Verify that the service is running correctly:
-   ```bash
-   sudo systemctl status bme280_client.service
-   ```
+```bash
+sudo systemctl status bme280_client.service
+```
 
 9. **View logs:** To see the output and any errors from the service, use:
-   ```bash
-   sudo journalctl -u bme280_client.service -f
-   ```
+```bash
+sudo journalctl -u bme280_client.service -f
+```
+
+## TODO
+
+- [ ] hold sensor data if database/api server is down and send when reconnected
