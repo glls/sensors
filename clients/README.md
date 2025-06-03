@@ -42,13 +42,17 @@ Description=BME280 Sensor Data Client
 After=network.target
 
 [Service]
-User=your_user  # Replace with the user you want to run the script as
-WorkingDirectory=/path/to/your/script/directory  # Replace with the actual path
-ExecStart=/usr/bin/python3 /path/to/your/script/directory/bme280_client.py  # Replace with the full path to your script
+# Replace with the user you want to run the script as
+User=your_user
+# Replace with the actual path
+WorkingDirectory=/path/to/your/script/directory
+# Replace with the full path to your script
+ExecStart=/usr/bin/python3 /path/to/your/script/directory/bme280_client.py
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal
 Environment="SEND_TO_TIMESCALEDB=True"
+Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
