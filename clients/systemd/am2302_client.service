@@ -1,0 +1,16 @@
+[Unit]
+Description=DHT22 Sensor Data Client
+After=network.target
+
+[Service]
+User=gl
+WorkingDirectory=/home/gl/clients
+ExecStart=/usr/bin/python3.9 /home/gl/clients/am2302_client.py
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+Environment="SEND_TO_TIMESCALEDB=True"
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
