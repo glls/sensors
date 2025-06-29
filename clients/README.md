@@ -94,4 +94,5 @@ sudo journalctl -u bme280_client.service -f
 
 ## TODO
 
-- [ ] hold sensor data if database/api server is down and send when reconnected
+* [ ] store timestamp from sensor data (actual reading time)
+* [ ] hold sensor data if database/api server is down and send when reconnected
