@@ -80,7 +80,7 @@ def validate_data(data: Dict[str, float]) -> bool:
     return True
 
 
-def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
+def send_data(config: Dict[str, Any], data: Dict[str, float]) -> bool:
     """Send sensor data to the configured destination."""
     sensor_id = config['bme280_sensor_id']
 
@@ -99,8 +99,11 @@ def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
                 data['humidity'],
                 data['pressure']
             )
+        return True
     except Exception as e:
         print(f"Failed to send data: {str(e)}")
+        return False
+
 
 
 def main():
@@ -115,16 +118,23 @@ def main():
     try:
         while True:
             try:
+                # Try to resend buffered data first
+                new_buffer = []
+                for buffered_data in buffer:
+                    if not send_data(config, buffered_data):
+                        new_buffer.append(buffered_data)
+                buffer = new_buffer
+
                 # Read sensor data
                 data = read_sensor_data(bus, config['bme280_address'], calibration_params)
-
                 print(f"Temperature: {data['temperature']:.2f} °C\t"
                       f"Humidity: {data['humidity']:.2f} %\t"
                       f"Pressure: {data['pressure']:.2f} hPa")
 
                 # Validate and send data
                 if validate_data(data):
-                    send_data(config, data)
+                    if not send_data(config, data):
+                        buffer.append(data)
 
                 # Wait for next reading
                 time.sleep(config['bme280_interval'])
