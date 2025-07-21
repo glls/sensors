@@ -5,11 +5,9 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from dotenv import load_dotenv
 from rest_framework import generics
-from rest_framework.exceptions import APIException
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
-from core.utils.scheduler_control import scheduler_enabled
 
 from core.models import Sensor, SensorDataTemp, SensorDataAir, SensorDataIndoor
 from .serializers import (
@@ -19,7 +17,8 @@ from .serializers import (
     SensorDataIndoorSerializer,
 )
 
-LAT, LON = 40.678967, 22.917712 # Thessaloniki, Greece
+LAT, LON = 40.678967, 22.917712  # Thessaloniki, Greece
+
 
 def broadcast_sensor_data(data):
     """
@@ -99,7 +98,6 @@ class SensorDataTempLatestAPIView(generics.RetrieveAPIView):
         ).order_by('-time').first()
 
 
-
 # api/views.py
 class WeatherDataAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -145,6 +143,8 @@ class AirPollutionDataAPIView(APIView):
             )
 
         return Response(response.json())
+
+
 class ToggleSchedulerAPIView(APIView):
     def get(self, request, *args, **kwargs):
         global scheduler_enabled

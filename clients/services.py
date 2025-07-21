@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import psycopg2
 import pytz
@@ -35,10 +35,10 @@ def load_config() -> Dict[str, Any]:
 CONFIG = load_config()
 
 
-def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None):
+def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None, time=None):
     try:
         payload = {
-            "time": datetime.now(pytz.utc).isoformat(),
+            "time": time if time else datetime.now(pytz.utc).isoformat(),
             "sensor_id": sensor_id,
             "temperature": temperature,
             "pressure": pressure,
@@ -53,7 +53,7 @@ def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None):
         print(f"HTTP request to API failed: {e}")
 
 
-def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=None):
+def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=None, time=None):
     if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
                 CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
@@ -69,7 +69,7 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
             password=CONFIG['timescaledb_password']
         )
         cur = conn.cursor()
-        now_utc = datetime.now(pytz.utc).isoformat()
+        now_utc = time if time else datetime.now(pytz.utc).isoformat()
         sql = """
               INSERT INTO sensor_data_temp (time, sensor_id, temperature, humidity, pressure)
               VALUES (%s, %s, %s, %s, %s); \
@@ -109,7 +109,7 @@ def get_temp_data_last_timescaledb(sensor_id):
               FROM sensor_data_temp
               WHERE sensor_id = %s
               ORDER BY time DESC
-                  LIMIT 1; \
+              LIMIT 1; \
               """
         cur.execute(sql, (sensor_id,))
         row = cur.fetchone()
@@ -177,10 +177,10 @@ def get_temp_data_last_api(sensor_id):
         return None
 
 
-def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
+def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2,  time=None):
     try:
         payload = {
-            "time": datetime.now(pytz.utc).isoformat(),
+            "time": time if time else datetime.now(pytz.utc).isoformat(),
             "sensor_id": sensor_id,
             "aqi": aqi,
             "tvoc": tvoc,
@@ -195,7 +195,7 @@ def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2):
         print(f"HTTP request to API failed: {e}")
 
 
-def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
+def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2, time=None):
     if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
                 CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
@@ -211,7 +211,7 @@ def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
             password=CONFIG['timescaledb_password']
         )
         cur = conn.cursor()
-        now_utc = datetime.now(pytz.utc).isoformat()
+        now_utc = time if time else datetime.now(pytz.utc).isoformat()
         sql = """
               INSERT INTO sensor_data_indoor (time, sensor_id, aqi, tvoc, eco2)
               VALUES (%s, %s, %s, %s, %s); \
@@ -230,10 +230,10 @@ def send_indoor_data_to_timescaledb(ens160_sensor_id, aqi, tvoc, e_co2):
             conn.close()
 
 
-def send_air_data_to_api(sensor_id, pm10, pm25, temperature=None, humidity=None, pressure=None, signal=None):
+def send_air_data_to_api(sensor_id, pm10, pm25, temperature=None, humidity=None, pressure=None, signal=None, time=None):
     try:
         payload = {
-            "time": datetime.now(pytz.utc).isoformat(),
+            "time": time if time else datetime.now(pytz.utc).isoformat(),
             "sensor_id": sensor_id,
             "p1": pm10,
             "p2": pm25,
@@ -251,7 +251,8 @@ def send_air_data_to_api(sensor_id, pm10, pm25, temperature=None, humidity=None,
         print(f"HTTP request to API failed: {e}")
 
 
-def send_air_data_to_timescaledb(sensor_id, pm10, pm25, temperature=None, humidity=None, pressure=None, signal=None):
+def send_air_data_to_timescaledb(sensor_id, pm10, pm25, temperature=None, humidity=None, pressure=None, signal=None,
+                                 time=None):
     if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
                 CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
@@ -267,7 +268,7 @@ def send_air_data_to_timescaledb(sensor_id, pm10, pm25, temperature=None, humidi
             password=CONFIG['timescaledb_password']
         )
         cur = conn.cursor()
-        now_utc = datetime.now(pytz.utc).isoformat()
+        now_utc = time if time else datetime.now(pytz.utc).isoformat()
         sql = """
               INSERT INTO sensor_data_air (time, sensor_id, p1, p2, temperature, humidity, pressure, signal)
               VALUES (%s, %s, %s, %s, %s, %s, %s, %s); \
