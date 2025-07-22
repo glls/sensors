@@ -35,7 +35,8 @@ def load_config() -> Dict[str, Any]:
 CONFIG = load_config()
 
 
-def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None, time=None):
+def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None, time=None) -> bool:
+    err = True
     try:
         payload = {
             "time": time if time else datetime.now(pytz.utc).isoformat(),
@@ -47,17 +48,20 @@ def send_temp_data_to_api(sensor_id, temperature, humidity, pressure=None, time=
         response = requests.post(CONFIG['api_temp_url'], json=payload)
         if response.status_code == 201:
             print("Data sent to API successfully:", response.json())
+            err = False
         else:
             print(f"Failed to send data to API: {response.status_code} - {response.text}")
     except RequestException as e:
         print(f"HTTP request to API failed: {e}")
+    return err
 
 
-def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=None, time=None):
+def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=None, time=None) -> bool:
+    err = True
     if not all([CONFIG['timescaledb_host'], CONFIG['timescaledb_dbname'],
                 CONFIG['timescaledb_user'], CONFIG['timescaledb_password']]):
         print("Error: TimescaleDB connection details not fully configured via environment variables.")
-        return
+        return err
 
     conn = None
     try:
@@ -78,6 +82,7 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
         cur.execute(sql, data)
         conn.commit()
         print(f"Sensor [{sensor_id}] data sent to TimescaleDB successfully.")
+        err = False
     except psycopg2.Error as e:
         print(f"Error sending sensor [{sensor_id}] data to TimescaleDB: {e}")
         if conn:
@@ -86,6 +91,8 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
         if conn:
             cur.close()
             conn.close()
+
+    return err
 
 
 def get_temp_data_last_timescaledb(sensor_id):
@@ -177,7 +184,7 @@ def get_temp_data_last_api(sensor_id):
         return None
 
 
-def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2,  time=None):
+def send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2, time=None):
     try:
         payload = {
             "time": time if time else datetime.now(pytz.utc).isoformat(),
