@@ -19,7 +19,7 @@ def load_config() -> Dict[str, Any]:
         'send_to_api': os.environ.get('SEND_TO_API', 'False').lower() == 'true',
         'bme280_sensor_id': os.environ.get('BME280_SENSOR_ID'),
         'bme280_address': 0x76,  # Default address for BME280
-        'bme280_interval': 55    # Default delay time in seconds
+        'bme280_interval': 55  # Default delay time in seconds
     }
 
     if config['bme280_sensor_id'] is None:
@@ -105,10 +105,10 @@ def send_data(config: Dict[str, Any], data: Dict[str, float]) -> bool:
         return False
 
 
-
 def main():
     """Main execution function."""
     config = load_config()
+    buffer = []
     bus, calibration_params = setup_sensor()
 
     if not bus or not calibration_params:
