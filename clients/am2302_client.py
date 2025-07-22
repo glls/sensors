@@ -121,7 +121,7 @@ def main():
                     send_data(config, data)
             else:
                 print("Failed to read from DHT sensor, retrying...")
-                time.sleep(2)
+                time.sleep(4)
                 continue
 
             # Wait for next reading
