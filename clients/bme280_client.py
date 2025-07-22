@@ -123,6 +123,7 @@ def main():
                 for buffered_data in buffer:
                     if not send_data(config, buffered_data):
                         new_buffer.append(buffered_data)
+                        print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
                 buffer = new_buffer
 
                 # Read sensor data
@@ -134,6 +135,7 @@ def main():
                 # Validate and send data
                 if validate_data(data):
                     if not send_data(config, data):
+                        print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
                         buffer.append(data)
 
                 # Wait for next reading
