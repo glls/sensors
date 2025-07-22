@@ -1,6 +1,8 @@
 import os
 import time
 import sys
+from datetime import datetime
+import pytz
 from typing import Dict, Any, Optional, Tuple
 
 import bme280
@@ -53,13 +55,14 @@ def setup_sensor() -> Tuple[Optional[smbus2.SMBus], Optional[Any]]:
         return None, None
 
 
-def read_sensor_data(bus: smbus2.SMBus, address: int, calibration_params: Any) -> Dict[str, float]:
+def read_sensor_data(bus: smbus2.SMBus, address: int, calibration_params: Any) -> dict[str, Any]:
     """Read data from the BME280 sensor."""
     data = bme280.sample(bus, address, calibration_params)
     return {
         'temperature': data.temperature,
         'humidity': data.humidity,
-        'pressure': data.pressure
+        'pressure': data.pressure,
+        'time': datetime.now(pytz.utc).isoformat()
     }
 
 
@@ -83,26 +86,25 @@ def validate_data(data: Dict[str, float]) -> bool:
 def send_data(config: Dict[str, Any], data: Dict[str, float]) -> bool:
     """Send sensor data to the configured destination."""
     sensor_id = config['bme280_sensor_id']
+    success = False
 
-    try:
-        if config['send_to_timescaledb']:
-            services.send_temp_data_to_timescaledb(
-                sensor_id,
-                data['temperature'],
-                data['humidity'],
-                data['pressure']
-            )
-        elif config['send_to_api']:
-            services.send_temp_data_to_api(
-                sensor_id,
-                data['temperature'],
-                data['humidity'],
-                data['pressure']
-            )
-        return True
-    except Exception as e:
-        print(f"Failed to send data: {str(e)}")
-        return False
+    if config['send_to_timescaledb']:
+        success = services.send_temp_data_to_timescaledb(
+            sensor_id,
+            data['temperature'],
+            data['humidity'],
+            data['pressure'],
+            data['time']
+        )
+    elif config['send_to_api']:
+        success = services.send_temp_data_to_api(
+            sensor_id,
+            data['temperature'],
+            data['humidity'],
+            data['pressure'],
+            data['time']
+        )
+    return success
 
 
 def main():
@@ -130,13 +132,14 @@ def main():
                 data = read_sensor_data(bus, config['bme280_address'], calibration_params)
                 print(f"Temperature: {data['temperature']:.2f} °C\t"
                       f"Humidity: {data['humidity']:.2f} %\t"
-                      f"Pressure: {data['pressure']:.2f} hPa")
+                      f"Pressure: {data['pressure']:.2f} hPa\t"
+                      f"Time: {data['time']}")
 
                 # Validate and send data
                 if validate_data(data):
                     if not send_data(config, data):
-                        print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
                         buffer.append(data)
+                        print(f"Failed to send new data, will buffer and retry later. Buffer size: {len(buffer)}")
 
                 # Wait for next reading
                 time.sleep(config['bme280_interval'])

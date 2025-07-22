@@ -2,11 +2,14 @@ import os
 import time
 import sys
 from typing import Dict, Optional, Any
+from datetime import datetime
+import pytz
 
 from dotenv import load_dotenv
 
 import services
 from DFRobot_ENS160 import DFRobot_ENS160_I2C, ENS160_STANDARD_MODE
+
 
 def load_config() -> Dict[str, Any]:
     """Load and validate environment configuration."""
@@ -34,6 +37,7 @@ def load_config() -> Dict[str, Any]:
 
     return config
 
+
 def validate_data(aqi: int, tvoc: int, e_co2: int) -> bool:
     """Validate sensor data is within acceptable ranges."""
     if aqi is None or aqi < 1 or aqi > 5:
@@ -49,6 +53,7 @@ def validate_data(aqi: int, tvoc: int, e_co2: int) -> bool:
         return False
 
     return True
+
 
 def setup_sensor(sensor: DFRobot_ENS160_I2C, ambient_temp: float = 25.0, ambient_hum: float = 50.0) -> bool:
     """Initialize the ENS160 sensor with provided temperature and humidity."""
@@ -74,6 +79,7 @@ def setup_sensor(sensor: DFRobot_ENS160_I2C, ambient_temp: float = 25.0, ambient
 
     return True
 
+
 def get_environmental_data(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get the latest temperature and humidity data from BME280 sensor."""
     bme280_id = config['bme280_sensor_id']
@@ -90,28 +96,32 @@ def get_environmental_data(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             return None
 
         if data:
-            print(f"Retrieved environmental data: {data['temperature']:.2f}°C, {data['humidity']:.2f}% on {data['time']}")
+            print(
+                f"Retrieved environmental data: {data['temperature']:.2f}°C, {data['humidity']:.2f}% on {data['time']}")
         return data
     except Exception as e:
         print(f"Failed to retrieve environmental data: {str(e)}")
         return None
 
-def send_data(config: Dict[str, Any], aqi: int, tvoc: int, e_co2: int) -> None:
+
+def send_data(config: Dict[str, Any], data: dict[str, Any]) -> None:
     """Send sensor data to the configured destination."""
     sensor_id = config['ens160_sensor_id']
 
     try:
         if config['send_to_timescaledb']:
-            services.send_indoor_data_to_timescaledb(sensor_id, aqi, tvoc, e_co2)
+            services.send_indoor_data_to_timescaledb(sensor_id, data['aqi'], data['tvoc'], data['e_co2'], data['time'])
         elif config['send_to_api']:
-            services.send_indoor_data_to_api(sensor_id, aqi, tvoc, e_co2)
+            services.send_indoor_data_to_api(sensor_id, data['aqi'], data['tvoc'], data['e_co2'], data['time'])
     except Exception as e:
         print(f"Failed to send data: {str(e)}")
+
 
 def main():
     """Main execution function."""
     config = load_config()
     sensor = DFRobot_ENS160_I2C(i2c_addr=0x53, bus=1)
+    buffer = []
 
     # Initial setup
     env_data = get_environmental_data(config)
@@ -126,6 +136,15 @@ def main():
 
     try:
         while True:
+
+            # Try to resend buffered data first
+            new_buffer = []
+            for buffered_data in buffer:
+                if not send_data(config, buffered_data):
+                    new_buffer.append(buffered_data)
+                    print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
+            buffer = new_buffer
+
             # Update environmental data before each measurement
             env_data = get_environmental_data(config)
             if env_data:
@@ -134,15 +153,24 @@ def main():
             try:
                 # Get sensor readings
                 sensor_status = sensor.get_ENS160_status()
-                aqi = sensor.get_AQI
-                tvoc = sensor.get_TVOC_ppb
-                e_co2 = sensor.get_ECO2_ppm
+                data = {
+                    'aqi': sensor.get_AQI,
+                    'tvoc': sensor.get_TVOC_ppb,
+                    'e_co2': sensor.get_ECO2_ppm,
+                    'time': datetime.now(pytz.utc).isoformat()
+                }
 
-                print(f"Status: {sensor_status}, AQI: {aqi} (1-5), TVOC: {tvoc} ppb, eCO2: {e_co2} ppm")
+                print(f"Status: {sensor_status}\t"
+                      f"AQI: {data['aqi']} (1-5)\t"
+                      f"TVOC: {data['tvoc']} ppb\t"
+                      f"eCO2: {data['e_co2']} ppm\t"
+                      f"Time: {time}")
 
                 # Validate and send data
-                if validate_data(aqi, tvoc, e_co2):
-                    send_data(config, aqi, tvoc, e_co2)
+                if validate_data(data):
+                    if not send_data(config, data):
+                        buffer.append(data)
+                        print(f"Failed to send new data, will buffer and retry later. Buffer size: {len(buffer)}")
 
                 # Wait for next reading
                 time.sleep(config['ens160_interval'])
@@ -153,6 +181,7 @@ def main():
 
     except KeyboardInterrupt:
         print("Program stopped by user")
+
 
 if __name__ == "__main__":
     main()

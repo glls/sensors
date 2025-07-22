@@ -2,6 +2,8 @@ import os
 import time
 import sys
 from typing import Dict, Any, Optional, Tuple
+from datetime import datetime
+import pytz
 
 import adafruit_dht
 import board
@@ -49,7 +51,7 @@ def setup_sensor(pin):
         return None
 
 
-def read_sensor_data(sensor: adafruit_dht.DHT22) -> Optional[Dict[str, float]]:
+def read_sensor_data(sensor: adafruit_dht.DHT22) -> Optional[Dict[str, Any]]:
     """Read data from the DHT22 sensor."""
     try:
         temperature = sensor.temperature
@@ -57,7 +59,8 @@ def read_sensor_data(sensor: adafruit_dht.DHT22) -> Optional[Dict[str, float]]:
 
         return {
             'temperature': temperature,
-            'humidity': humidity
+            'humidity': humidity,
+            'time': datetime.now(pytz.utc).isoformat()
         }
     except RuntimeError:
         # Errors happen fairly often with DHT sensors, just return None
@@ -102,6 +105,7 @@ def main():
     """Main execution function."""
     config = load_config()
     sensor = setup_sensor(config['dht22_pin'])
+    buffer = []
 
     if not sensor:
         print("Cannot continue without working sensor. Exiting.")
@@ -109,16 +113,27 @@ def main():
 
     try:
         while True:
+
+            # Try to resend buffered data first
+            new_buffer = []
+            for buffered_data in buffer:
+                if not send_data(config, buffered_data):
+                    new_buffer.append(buffered_data)
+                    print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
+            buffer = new_buffer
+
             # Read sensor data
             data = read_sensor_data(sensor)
-
             if data:
                 print(f"Temperature: {data['temperature']:.2f} °C\t"
-                      f"Humidity: {data['humidity']:.2f} %")
+                      f"Humidity: {data['humidity']:.2f} %"
+                      f"Time: {data['time']}")
 
                 # Validate and send data
                 if validate_data(data):
-                    send_data(config, data)
+                    if not send_data(config, data):
+                        buffer.append(data)
+                        print(f"Failed to send new data, will buffer and retry later. Buffer size: {len(buffer)}")
             else:
                 print("Failed to read from DHT sensor, retrying...")
                 time.sleep(4)

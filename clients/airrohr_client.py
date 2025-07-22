@@ -2,6 +2,8 @@ import os
 import time
 import sys
 from typing import Dict, Optional, Any
+from datetime import datetime
+import pytz
 
 import requests
 from dotenv import load_dotenv
@@ -36,7 +38,7 @@ def load_config() -> Dict[str, Any]:
     return config
 
 
-def get_airrohr_data(url: str) -> Optional[Dict[str, float]]:
+def get_airrohr_data(url: str) -> Optional[Dict[str, Any]]:
     """Get air quality data from AirRohr sensor."""
     try:
         response = requests.get(url)
@@ -57,7 +59,8 @@ def get_airrohr_data(url: str) -> Optional[Dict[str, float]]:
             'temperature': readings.get('BME280_temperature', 0),
             'pressure': readings.get('BME280_pressure', 0) / 100.0,
             'humidity': readings.get('BME280_humidity', 0),
-            'signal': readings.get('signal', 0)
+            'signal': readings.get('signal', 0),
+            'time': datetime.now(pytz.utc).isoformat()
         }
     except requests.RequestException as e:
         print(f"Error fetching data: {e}")
@@ -124,21 +127,34 @@ def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
 def main():
     """Main execution function."""
     config = load_config()
+    buffer = []
 
     try:
         while True:
-            data = get_airrohr_data(config['airrohr_url'])
 
+            # Try to resend buffered data first
+            new_buffer = []
+            for buffered_data in buffer:
+                if not send_data(config, buffered_data):
+                    new_buffer.append(buffered_data)
+                    print(f"Failed to resend buffered data will retry later. Buffer size: {len(new_buffer)}")
+            buffer = new_buffer
+
+            # Fetch new data from AirRohr sensor
+            data = get_airrohr_data(config['airrohr_url'])
             if data:
                 print(f"PM10: {data['pm10']:.2f} µg/m³\t"
                       f"PM2.5: {data['pm25']:.2f} µg/m³\t"
                       f"Temperature: {data['temperature']:.2f} °C\t"
                       f"Humidity: {data['humidity']:.2f} %\t"
                       f"Pressure: {data['pressure']:.2f} hPa\t"
-                      f"Signal: {data['signal']} dBm")
+                      f"Signal: {data['signal']} dBm\t"
+                      f"Time: {data['time']}")
 
                 if validate_data(data):
-                    send_data(config, data)
+                    if not send_data(config, data):
+                        buffer.append(data)
+                        print(f"Failed to send new data, will buffer and retry later. Buffer size: {len(buffer)}")
 
             time.sleep(config['airrohr_interval'])
 
