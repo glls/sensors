@@ -83,7 +83,7 @@ def send_temp_data_to_timescaledb(sensor_id, temperature, humidity, pressure=Non
         cur.execute(sql, data)
         conn.commit()
         success = True
-        print(f"Sensor [{sensor_id}] data sent to TimescaleDB successfully.{success}")
+        print(f"Sensor [{sensor_id}] data sent to TimescaleDB successfully.")
     except psycopg2.Error as e:
         print(f"Error sending sensor [{sensor_id}] data to TimescaleDB: {e}")
         if conn:

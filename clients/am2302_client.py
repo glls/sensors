@@ -1,12 +1,12 @@
 import os
-import time
 import sys
-from typing import Dict, Any, Optional, Tuple
+import time
 from datetime import datetime
-import pytz
+from typing import Dict, Any, Optional
 
 import adafruit_dht
 import board
+import pytz
 from dotenv import load_dotenv
 
 import services
@@ -83,22 +83,23 @@ def validate_data(data: Dict[str, float]) -> bool:
 def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
     """Send sensor data to the configured destination."""
     sensor_id = config['dht22_sensor_id']
+    success = False
 
-    try:
-        if config['send_to_timescaledb']:
-            services.send_temp_data_to_timescaledb(
-                sensor_id,
-                data['temperature'],
-                data['humidity']
-            )
-        elif config['send_to_api']:
-            services.send_temp_data_to_api(
-                sensor_id,
-                data['temperature'],
-                data['humidity']
-            )
-    except Exception as e:
-        print(f"Failed to send data: {str(e)}")
+    if config['send_to_timescaledb']:
+        success = services.send_temp_data_to_timescaledb(
+            sensor_id,
+            data['temperature'],
+            data['humidity'],
+            time=data['time']
+        )
+    elif config['send_to_api']:
+        success = services.send_temp_data_to_api(
+            sensor_id,
+            data['temperature'],
+            data['humidity'],
+            time=data['time']
+        )
+    return success
 
 
 def main():
@@ -126,7 +127,7 @@ def main():
             data = read_sensor_data(sensor)
             if data:
                 print(f"Temperature: {data['temperature']:.2f} °C\t"
-                      f"Humidity: {data['humidity']:.2f} %"
+                      f"Humidity: {data['humidity']:.2f} %\t"
                       f"Time: {data['time']}")
 
                 # Validate and send data

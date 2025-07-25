@@ -1,11 +1,11 @@
 import os
-import time
 import sys
+import time
 from datetime import datetime
-import pytz
 from typing import Dict, Any, Optional, Tuple
 
 import bme280
+import pytz
 import smbus2
 from dotenv import load_dotenv
 

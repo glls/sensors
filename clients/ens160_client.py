@@ -1,10 +1,10 @@
 import os
-import time
 import sys
-from typing import Dict, Optional, Any
+import time
 from datetime import datetime
-import pytz
+from typing import Dict, Optional, Any
 
+import pytz
 from dotenv import load_dotenv
 
 import services
@@ -38,17 +38,17 @@ def load_config() -> Dict[str, Any]:
     return config
 
 
-def validate_data(aqi: int, tvoc: int, e_co2: int) -> bool:
+def validate_data(data: dict[str, Any]) -> bool:
     """Validate sensor data is within acceptable ranges."""
-    if aqi is None or aqi < 1 or aqi > 5:
+    if data['aqi'] is None or data['aqi'] < 1 or data['aqi'] > 5:
         print("Invalid AQI value")
         return False
 
-    if tvoc is None or tvoc < 0 or tvoc > 65000:
+    if data['tvoc'] is None or data['tvoc'] < 0 or data['tvoc'] > 65000:
         print("Invalid TVOC value")
         return False
 
-    if e_co2 is None or e_co2 < 400 or e_co2 > 65000:
+    if data['e_co2'] is None or data['e_co2'] < 400 or data['e_co2'] > 65000:
         print("Invalid eCO2 value")
         return False
 
@@ -107,14 +107,23 @@ def get_environmental_data(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 def send_data(config: Dict[str, Any], data: dict[str, Any]) -> None:
     """Send sensor data to the configured destination."""
     sensor_id = config['ens160_sensor_id']
+    success = False
 
-    try:
-        if config['send_to_timescaledb']:
-            services.send_indoor_data_to_timescaledb(sensor_id, data['aqi'], data['tvoc'], data['e_co2'], data['time'])
-        elif config['send_to_api']:
-            services.send_indoor_data_to_api(sensor_id, data['aqi'], data['tvoc'], data['e_co2'], data['time'])
-    except Exception as e:
-        print(f"Failed to send data: {str(e)}")
+    if config['send_to_timescaledb']:
+        success = services.send_indoor_data_to_timescaledb(
+            sensor_id,
+            data['aqi'],
+            data['tvoc'],
+            data['e_co2'],
+            data['time'])
+    elif config['send_to_api']:
+        success = services.send_indoor_data_to_api(
+            sensor_id,
+            data['aqi'],
+            data['tvoc'],
+            data['e_co2'],
+            data['time'])
+    return success
 
 
 def main():
@@ -153,18 +162,19 @@ def main():
             try:
                 # Get sensor readings
                 sensor_status = sensor.get_ENS160_status()
+                t = datetime.now(pytz.utc).isoformat()
                 data = {
                     'aqi': sensor.get_AQI,
                     'tvoc': sensor.get_TVOC_ppb,
                     'e_co2': sensor.get_ECO2_ppm,
-                    'time': datetime.now(pytz.utc).isoformat()
+                    'time': t
                 }
 
                 print(f"Status: {sensor_status}\t"
                       f"AQI: {data['aqi']} (1-5)\t"
                       f"TVOC: {data['tvoc']} ppb\t"
                       f"eCO2: {data['e_co2']} ppm\t"
-                      f"Time: {time}")
+                      f"Time: {t}")
 
                 # Validate and send data
                 if validate_data(data):

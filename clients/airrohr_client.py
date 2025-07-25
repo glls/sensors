@@ -1,10 +1,10 @@
 import os
-import time
 import sys
-from typing import Dict, Optional, Any
+import time
 from datetime import datetime
-import pytz
+from typing import Dict, Optional, Any
 
+import pytz
 import requests
 from dotenv import load_dotenv
 
@@ -95,33 +95,35 @@ def validate_data(data: Dict[str, float]) -> bool:
     return True
 
 
-def send_data(config: Dict[str, Any], data: Dict[str, float]) -> None:
+def send_data(config: Dict[str, Any], data: Dict[str, float]) -> bool:
     """Send sensor data to the configured destination."""
     sensor_id = int(config['airrohr_sensor_id'])
+    success = False
 
-    try:
-        if config['send_to_timescaledb']:
-            services.send_air_data_to_timescaledb(
-                sensor_id,
-                data['pm10'],
-                data['pm25'],
-                data['temperature'],
-                data['humidity'],
-                data['pressure'],
-                int(data['signal'])
-            )
-        elif config['send_to_api']:
-            services.send_air_data_to_api(
-                sensor_id,
-                data['pm10'],
-                data['pm25'],
-                data['temperature'],
-                data['humidity'],
-                data['pressure'],
-                int(data['signal'])
-            )
-    except Exception as e:
-        print(f"Failed to send data: {str(e)}")
+    if config['send_to_timescaledb']:
+        success = services.send_air_data_to_timescaledb(
+            sensor_id,
+            data['pm10'],
+            data['pm25'],
+            data['temperature'],
+            data['humidity'],
+            data['pressure'],
+            int(data['signal']),
+            data['time']
+        )
+    elif config['send_to_api']:
+        success = services.send_air_data_to_api(
+            sensor_id,
+            data['pm10'],
+            data['pm25'],
+            data['temperature'],
+            data['humidity'],
+            data['pressure'],
+            int(data['signal']),
+            data['time']
+        )
+
+    return success
 
 
 def main():
