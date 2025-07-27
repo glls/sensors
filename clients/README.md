@@ -29,6 +29,7 @@ boot, follow these steps:
 
 1. **Create the service file:** Create a new file named `bme280_client.service` in the systemd service directory,
    typically located at `/etc/systemd/system/`. You will need root privileges for this:
+
 ```bash
 sudo nano /etc/systemd/system/bme280_client.service
 ```
@@ -68,31 +69,36 @@ WantedBy=multi-user.target
 4. **Save and close the file.**
 
 5. **Reload systemd configuration:** Apply the changes by reloading the systemd manager configuration:
+
 ```bash
 sudo systemctl daemon-reload
 ```
 
 6. **Enable the service to start on boot:**
+
 ```bash
 sudo systemctl enable bme280_client.service
 ```
 
 7. **Start the service immediately:**
+
 ```bash
 sudo systemctl start bme280_client.service
 ```
 
 8. **Check the service status:** Verify that the service is running correctly:
+
 ```bash
 sudo systemctl status bme280_client.service
 ```
 
 9. **View logs:** To see the output and any errors from the service, use:
+
 ```bash
 sudo journalctl -u bme280_client.service -f
 ```
 
 ## TODO
 
-* [ ] store timestamp from sensor data (actual reading time)
-* [ ] hold sensor data if database/api server is down and send when reconnected
+* [X] store timestamp from sensor data (actual reading time)
+* [X] hold sensor data if database/api server is down and send when reconnected
