@@ -3,133 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensor Data</title>
+    <title>Sensors Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     {% load static %}
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-header: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-orange: #fb923c;
+            --accent-purple: #a78bfa;
+            --accent-red: #f87171;
+            --accent-teal: #2dd4bf;
+            --border-color: #475569;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .dashboard-header {
+            padding: 1.5rem 0 1rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .dashboard-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .card-header {
+            background-color: var(--bg-card-header);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .metric:first-child {
+            padding-top: 0;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 1rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-unit {
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-size: 0.8rem;
+            margin-left: 0.2rem;
+        }
+
+        .text-accent-blue { color: var(--accent-blue); }
+        .text-accent-green { color: var(--accent-green); }
+        .text-accent-orange { color: var(--accent-orange); }
+        .text-accent-purple { color: var(--accent-purple); }
+        .text-accent-red { color: var(--accent-red); }
+        .text-accent-teal { color: var(--accent-teal); }
+
+        .timestamp {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+            padding-top: 0.5rem;
+            margin-top: 0.25rem;
+            border-top: 1px solid rgba(71, 85, 105, 0.4);
+        }
+
+        .no-data {
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+            padding: 1.5rem 0;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.connected { background-color: var(--accent-green); }
+        .status-dot.disconnected { background-color: var(--accent-red); }
+
+        .ws-status {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .aqi-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .aqi-1 { background-color: rgba(74, 222, 128, 0.2); color: var(--accent-green); }
+        .aqi-2 { background-color: rgba(45, 212, 191, 0.2); color: var(--accent-teal); }
+        .aqi-3 { background-color: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
+        .aqi-4 { background-color: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+        .aqi-5 { background-color: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
+    </style>
     <script src="{% static 'js/sensorData.js' %}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body>
 
-<div class="container mt-4">
-    <h1 class="text-center">Sensors</h1>
+<div class="container">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+        <h1><i class="bi bi-cpu"></i> Sensors Dashboard</h1>
+        <div class="ws-status">
+            <span class="status-dot" :class="wsConnected ? 'connected' : 'disconnected'"></span>
+            <span x-text="wsConnected ? 'Live' : 'Disconnected'"></span>
+        </div>
+    </div>
 
-    <!-- Weather and Air Pollution Data -->
-    <div class="row mb-4">
-        <div class="col-md-6">
+    <!-- Weather & Air Pollution -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-6" x-show="!(weatherData && weatherData.error && weatherData.error.includes('API key is missing'))">
             <div class="card">
-                <div class="card-header">Weather Data</div>
+                <div class="card-header">
+                    <i class="bi bi-cloud-sun"></i> Weather
+                </div>
                 <div class="card-body">
-                    <template x-if="weatherData">
+                    <template x-if="weatherData && !weatherData.error">
                         <div>
-                            <p><strong>Temperature:</strong> <span x-text="weatherData.main.temp"></span> °C</p>
-                            <p><strong>Weather:</strong> <span x-text="weatherData.weather[0].description"></span></p>
-                            <p><strong>Humidity:</strong> <span x-text="weatherData.main.humidity"></span> %</p>
-                            <p><strong>Pressure:</strong> <span x-text="weatherData.main.pressure"></span> hPa</p>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
+                                <span class="metric-value text-accent-orange" x-text="weatherData.main.temp + ' °C'"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-cloud"></i> Condition</span>
+                                <span class="metric-value" x-text="weatherData.weather[0].description" style="text-transform: capitalize;"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
+                                <span class="metric-value text-accent-blue" x-text="weatherData.main.humidity + ' %'"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
+                                <span class="metric-value" x-text="weatherData.main.pressure + ' hPa'"></span>
+                            </div>
                         </div>
                     </template>
-                    <p x-show="!weatherData">Loading weather data...</p>
+                    <template x-if="weatherData && weatherData.error">
+                        <p class="no-data" x-text="weatherData.error"></p>
+                    </template>
+                    <p class="no-data" x-show="!weatherData">Loading weather data...</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" x-show="!(pollutionData && pollutionData.error && pollutionData.error.includes('API key is missing'))">
             <div class="card">
-                <div class="card-header">Air Pollution Data</div>
+                <div class="card-header">
+                    <i class="bi bi-wind"></i> Air Pollution
+                </div>
                 <div class="card-body">
-                    <template x-if="pollutionData">
+                    <template x-if="pollutionData && !pollutionData.error">
                         <div>
-                            <p><strong>PM2.5:</strong> <span x-text="pollutionData.list[0].components.pm2_5"></span> µg/m³</p>
-                            <p><strong>PM10:</strong> <span x-text="pollutionData.list[0].components.pm10"></span> µg/m³</p>
-                            <p><strong>CO:</strong> <span x-text="pollutionData.list[0].components.co"></span> µg/m³</p>
-                            <p><strong>NO2:</strong> <span x-text="pollutionData.list[0].components.no2"></span> µg/m³</p>
+                            <div class="metric">
+                                <span class="metric-label">PM2.5</span>
+                                <span class="metric-value text-accent-orange"><span x-text="pollutionData.list[0].components.pm2_5"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">PM10</span>
+                                <span class="metric-value text-accent-red"><span x-text="pollutionData.list[0].components.pm10"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">CO</span>
+                                <span class="metric-value"><span x-text="pollutionData.list[0].components.co"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">NO2</span>
+                                <span class="metric-value"><span x-text="pollutionData.list[0].components.no2"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
                         </div>
                     </template>
-                    <p x-show="!pollutionData">Loading air pollution data...</p>
+                    <template x-if="pollutionData && pollutionData.error">
+                        <p class="no-data" x-text="pollutionData.error"></p>
+                    </template>
+                    <p class="no-data" x-show="!pollutionData">Loading air pollution data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outdoor & Indoor Sensors -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-tree"></i> Outdoor Sensor
+                </div>
+                <div class="card-body">
+                    <template x-if="outdoorSensor">
+                        <div>
+                            <div class="metric">
+                                <span class="metric-label">PM10</span>
+                                <span class="metric-value text-accent-red"><span x-text="outdoorSensor.pm10"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">PM2.5</span>
+                                <span class="metric-value text-accent-orange"><span x-text="outdoorSensor.pm25"></span><span class="metric-unit">ug/m3</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
+                                <span class="metric-value text-accent-orange"><span x-text="outdoorSensor.temperature"></span><span class="metric-unit">°C</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
+                                <span class="metric-value text-accent-blue"><span x-text="outdoorSensor.humidity"></span><span class="metric-unit">%</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
+                                <span class="metric-value"><span x-text="outdoorSensor.pressure"></span><span class="metric-unit">hPa</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-wifi"></i> Signal</span>
+                                <span class="metric-value"><span x-text="outdoorSensor.signal"></span><span class="metric-unit">dBm</span></span>
+                            </div>
+                            <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="outdoorSensor.time"></span></div>
+                        </div>
+                    </template>
+                    <p class="no-data" x-show="!outdoorSensor">No outdoor data available.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-house"></i> Indoor Air Quality
+                </div>
+                <div class="card-body">
+                    <template x-if="indoorSensor">
+                        <div>
+                            <div class="metric">
+                                <span class="metric-label">AQI</span>
+                                <span class="aqi-badge" :class="'aqi-' + indoorSensor.aqi" x-text="indoorSensor.aqi + ' / 5'"></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">TVOC</span>
+                                <span class="metric-value text-accent-purple"><span x-text="indoorSensor.tvoc"></span><span class="metric-unit">ppb</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">eCO2</span>
+                                <span class="metric-value text-accent-teal"><span x-text="indoorSensor.eco2"></span><span class="metric-unit">ppm</span></span>
+                            </div>
+                            <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="indoorSensor.time"></span></div>
+                        </div>
+                    </template>
+                    <p class="no-data" x-show="!indoorSensor">No indoor data available.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temperature Sensors -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-thermometer-half"></i> Temperature Sensor 1
+                </div>
+                <div class="card-body">
+                    <template x-if="tempSensor1">
+                        <div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
+                                <span class="metric-value text-accent-orange"><span x-text="tempSensor1.temperature"></span><span class="metric-unit">°C</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
+                                <span class="metric-value text-accent-blue"><span x-text="tempSensor1.humidity"></span><span class="metric-unit">%</span></span>
+                            </div>
+                            <template x-if="tempSensor1.pressure">
+                                <div class="metric">
+                                    <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
+                                    <span class="metric-value"><span x-text="tempSensor1.pressure"></span><span class="metric-unit">hPa</span></span>
+                                </div>
+                            </template>
+                            <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="tempSensor1.time"></span></div>
+                        </div>
+                    </template>
+                    <p class="no-data" x-show="!tempSensor1">No temperature data available.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-thermometer-half"></i> Temperature Sensor 2
+                </div>
+                <div class="card-body">
+                    <template x-if="tempSensor2">
+                        <div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
+                                <span class="metric-value text-accent-orange"><span x-text="tempSensor2.temperature"></span><span class="metric-unit">°C</span></span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
+                                <span class="metric-value text-accent-blue"><span x-text="tempSensor2.humidity"></span><span class="metric-unit">%</span></span>
+                            </div>
+                            <template x-if="tempSensor2.pressure">
+                                <div class="metric">
+                                    <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
+                                    <span class="metric-value"><span x-text="tempSensor2.pressure"></span><span class="metric-unit">hPa</span></span>
+                                </div>
+                            </template>
+                            <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="tempSensor2.time"></span></div>
+                        </div>
+                    </template>
+                    <p class="no-data" x-show="!tempSensor2">No temperature data available.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Card 1: Latest Outdoor Sensor Reading -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">Latest Outdoor Sensor Reading</div>
-            <div class="card-body">
-                <template x-if="outdoorSensor">
-                    <div>
-                        <p><strong>Sensor ID:</strong> <span x-text="outdoorSensor.sensor_id"></span></p>
-                        <p><strong>PM10:</strong> <span x-text="outdoorSensor.pm10"></span> µg/m³</p>
-                        <p><strong>PM2.5:</strong> <span x-text="outdoorSensor.pm25"></span> µg/m³</p>
-                        <p><strong>Temperature:</strong> <span x-text="outdoorSensor.temperature"></span> °C</p>
-                        <p><strong>Humidity:</strong> <span x-text="outdoorSensor.humidity"></span> %</p>
-                        <p><strong>Pressure:</strong> <span x-text="outdoorSensor.pressure"></span> hPa</p>
-                        <p><strong>Signal:</strong> <span x-text="outdoorSensor.signal"></span> dBm</p>
-                        <p><strong>Time:</strong> <span x-text="outdoorSensor.time"></span></p>
-                    </div>
-                </template>
-                <p x-show="!outdoorSensor">No outdoor data available.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card 2: Latest Indoor Sensor Reading -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">Latest Indoor Sensor Reading (ens160)</div>
-            <div class="card-body">
-                <template x-if="indoorSensor">
-                    <div>
-                        <p><strong>Sensor ID:</strong> <span x-text="indoorSensor.sensor_id"></span></p>
-                        <p><strong>AQI:</strong> <span x-text="indoorSensor.aqi"></span></p>
-                        <p><strong>TVOC:</strong> <span x-text="indoorSensor.tvoc"></span></p>
-                        <p><strong>eCO2:</strong> <span x-text="indoorSensor.eco2"></span></p>
-                        <p><strong>Time:</strong> <span x-text="indoorSensor.time"></span></p>
-                    </div>
-                </template>
-                <p x-show="!indoorSensor">No indoor data available.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Card 3: Latest Temperature Data (Sensor 1) -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">Latest Temperature Data (Sensor 1)</div>
-            <div class="card-body">
-                <template x-if="tempSensor1">
-                    <div>
-                        <p><strong>Temperature:</strong> <span x-text="tempSensor1.temperature"></span> °C</p>
-                        <p><strong>Humidity:</strong> <span x-text="tempSensor1.humidity"></span> %</p>
-                        <p><strong>Pressure:</strong> <span x-text="tempSensor1.pressure"></span> hPa</p>
-                        <p><strong>Time:</strong> <span x-text="tempSensor1.time"></span></p>
-                    </div>
-                </template>
-                <p x-show="!tempSensor1">No temperature data available for Sensor 1.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card 4: Latest Temperature Data (Sensor 2) -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">Latest Temperature Data (Sensor 2)</div>
-            <div class="card-body">
-                <template x-if="tempSensor2">
-                    <div>
-                        <p><strong>Temperature:</strong> <span x-text="tempSensor2.temperature"></span> °C</p>
-                        <p><strong>Humidity:</strong> <span x-text="tempSensor2.humidity"></span> %</p>
-                        <p><strong>Time:</strong> <span x-text="tempSensor2.time"></span></p>
-                    </div>
-                </template>
-                <p x-show="!tempSensor2">No temperature data available for Sensor 2.</p>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+    window.INITIAL_SENSOR_DATA = {{ initial_data|safe }};
+</script>
 
 </body>
 </html>

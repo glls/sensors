@@ -1,14 +1,45 @@
 window.sensorData = function sensorData() {
+    const initial = window.INITIAL_SENSOR_DATA || {};
+
     return {
-        clientCount: 0,
+        wsConnected: false,
         outdoorSensor: null,
         indoorSensor: null,
         tempSensor1: null,
         tempSensor2: null,
         weatherData: null,
         pollutionData: null,
+
         init() {
-            const socket = new WebSocket('ws://' + window.location.host + '/ws/sensor_data/');
+            // Load initial data from server
+            if (initial.outdoorSensor) this.outdoorSensor = this.formatSensorData(initial.outdoorSensor);
+            if (initial.indoorSensor) this.indoorSensor = this.formatSensorData(initial.indoorSensor);
+            if (initial.tempSensor1) this.tempSensor1 = this.formatSensorData(initial.tempSensor1);
+            if (initial.tempSensor2) this.tempSensor2 = this.formatSensorData(initial.tempSensor2);
+
+            this.connectWebSocket();
+            this.fetchWeather();
+            this.fetchPollution();
+
+            // Refresh weather and pollution data every 10 minutes
+            setInterval(() => {
+                this.fetchWeather();
+                this.fetchPollution();
+            }, 10 * 60 * 1000);
+        },
+
+        connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socket = new WebSocket(protocol + '//' + window.location.host + '/ws/sensor_data/');
+
+            socket.onopen = () => { this.wsConnected = true; };
+            socket.onclose = () => {
+                this.wsConnected = false;
+                // Reconnect after 5 seconds
+                setTimeout(() => this.connectWebSocket(), 5000);
+            };
+            socket.onerror = () => { this.wsConnected = false; };
+
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
 
@@ -22,38 +53,32 @@ window.sensorData = function sensorData() {
                     this.tempSensor2 = this.formatSensorData(data);
                 }
             };
+        },
 
-            // Fetch weather data
+        fetchWeather() {
             fetch('/api/weather/')
-                .then(response => response.json())
-                .then(data => {
-                    this.weatherData = data;
-                })
-                .catch(error => console.error('Error fetching weather data:', error));
+                .then(r => r.json())
+                .then(data => { this.weatherData = data; })
+                .catch(err => console.error('Error fetching weather data:', err));
+        },
 
-            // Fetch air pollution data
+        fetchPollution() {
             fetch('/api/air-pollution/')
-                .then(response => response.json())
-                .then(data => {
-                    this.pollutionData = data;
-                })
-                .catch(error => console.error('Error fetching air pollution data:', error));
+                .then(r => r.json())
+                .then(data => { this.pollutionData = data; })
+                .catch(err => console.error('Error fetching air pollution data:', err));
         },
+
         formatSensorData(data) {
-            data.time = this.formatTime(data.time);
-            return data;
+            return { ...data, time: this.formatTime(data.time) };
         },
+
         formatTime(time) {
-            const sensorTime = new Date(time);
-            return sensorTime.toLocaleDateString('en-GB', {
-                weekday: 'short',
-                day: '2-digit',
-                month: '2-digit',
-                year: '2-digit',
-            }) + ' ' + sensorTime.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
+            const d = new Date(time);
+            return d.toLocaleDateString('en-GB', {
+                weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit',
+            }) + ' ' + d.toLocaleTimeString('en-GB', {
+                hour: '2-digit', minute: '2-digit', hour12: false,
             });
         }
     };
