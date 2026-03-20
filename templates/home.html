@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     {% load static %}
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -163,13 +164,22 @@
         .aqi-3 { background-color: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
         .aqi-4 { background-color: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
         .aqi-5 { background-color: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
+
+        .chart-container {
+            position: relative;
+            height: 100%;
+            min-height: 250px;
+        }
     </style>
-    <script src="{% static 'js/sensorData.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="{% static 'js/sensorData.js' %}?v={{ cache_bust }}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body>
 
-<div class="container">
+<div class="container-fluid px-4">
     <div class="dashboard-header d-flex justify-content-between align-items-center">
         <h1><i class="bi bi-cpu"></i> Sensors Dashboard</h1>
         <div class="ws-status">
@@ -178,9 +188,9 @@
         </div>
     </div>
 
-    <!-- Weather & Air Pollution -->
-    <div class="row g-3 mb-3">
-        <div class="col-md-6" x-show="!(weatherData && weatherData.error && weatherData.error.includes('API key is missing'))">
+    <!-- Weather -->
+    <div class="row g-3 mb-3" x-show="!(weatherData && weatherData.error && weatherData.error.includes('API key is missing'))">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-cloud-sun"></i> Weather
@@ -202,7 +212,7 @@
                             </div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
-                                <span class="metric-value" x-text="weatherData.main.pressure + ' hPa'"></span>
+                                <span class="metric-value text-accent-teal" x-text="weatherData.main.pressure + ' hPa'"></span>
                             </div>
                         </div>
                     </template>
@@ -213,7 +223,23 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6" x-show="!(pollutionData && pollutionData.error && pollutionData.error.includes('API key is missing'))">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Weather History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="weatherChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Air Pollution -->
+    <div class="row g-3 mb-3" x-show="!(pollutionData && pollutionData.error && pollutionData.error.includes('API key is missing'))">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-wind"></i> Air Pollution
@@ -231,11 +257,11 @@
                             </div>
                             <div class="metric">
                                 <span class="metric-label">CO</span>
-                                <span class="metric-value"><span x-text="pollutionData.list[0].components.co"></span><span class="metric-unit">ug/m3</span></span>
+                                <span class="metric-value text-accent-teal"><span x-text="pollutionData.list[0].components.co"></span><span class="metric-unit">ug/m3</span></span>
                             </div>
                             <div class="metric">
                                 <span class="metric-label">NO2</span>
-                                <span class="metric-value"><span x-text="pollutionData.list[0].components.no2"></span><span class="metric-unit">ug/m3</span></span>
+                                <span class="metric-value text-accent-purple"><span x-text="pollutionData.list[0].components.no2"></span><span class="metric-unit">ug/m3</span></span>
                             </div>
                         </div>
                     </template>
@@ -246,11 +272,23 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Air Pollution History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="pollutionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Outdoor & Indoor Sensors -->
+    <!-- Outdoor Sensor -->
     <div class="row g-3 mb-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-tree"></i> Outdoor Sensor
@@ -276,11 +314,11 @@
                             </div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
-                                <span class="metric-value"><span x-text="outdoorSensor.pressure"></span><span class="metric-unit">hPa</span></span>
+                                <span class="metric-value text-accent-teal"><span x-text="Number(outdoorSensor.pressure).toFixed(2)"></span><span class="metric-unit">hPa</span></span>
                             </div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-wifi"></i> Signal</span>
-                                <span class="metric-value"><span x-text="outdoorSensor.signal"></span><span class="metric-unit">dBm</span></span>
+                                <span class="metric-value text-accent-green"><span x-text="outdoorSensor.signal"></span><span class="metric-unit">dBm</span></span>
                             </div>
                             <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="outdoorSensor.time"></span></div>
                         </div>
@@ -289,8 +327,23 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Outdoor History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="outdoorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <div class="col-md-6">
+    <!-- Indoor Air Quality -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-house"></i> Indoor Air Quality
@@ -317,11 +370,23 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Indoor History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="indoorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Temperature Sensors -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-6">
+    <!-- Temperature Sensor 1 -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-thermometer-half"></i> Temperature Sensor 1
@@ -331,16 +396,16 @@
                         <div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
-                                <span class="metric-value text-accent-orange"><span x-text="tempSensor1.temperature"></span><span class="metric-unit">°C</span></span>
+                                <span class="metric-value text-accent-orange"><span x-text="Number(tempSensor1.temperature).toFixed(2)"></span><span class="metric-unit">°C</span></span>
                             </div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
-                                <span class="metric-value text-accent-blue"><span x-text="tempSensor1.humidity"></span><span class="metric-unit">%</span></span>
+                                <span class="metric-value text-accent-blue"><span x-text="Number(tempSensor1.humidity).toFixed(2)"></span><span class="metric-unit">%</span></span>
                             </div>
                             <template x-if="tempSensor1.pressure">
                                 <div class="metric">
                                     <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
-                                    <span class="metric-value"><span x-text="tempSensor1.pressure"></span><span class="metric-unit">hPa</span></span>
+                                    <span class="metric-value text-accent-teal"><span x-text="Number(tempSensor1.pressure).toFixed(2)"></span><span class="metric-unit">hPa</span></span>
                                 </div>
                             </template>
                             <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="tempSensor1.time"></span></div>
@@ -350,8 +415,23 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Temperature 1 History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="temp1Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <div class="col-md-6">
+    <!-- Temperature Sensor 2 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-thermometer-half"></i> Temperature Sensor 2
@@ -361,22 +441,28 @@
                         <div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-thermometer-half"></i> Temperature</span>
-                                <span class="metric-value text-accent-orange"><span x-text="tempSensor2.temperature"></span><span class="metric-unit">°C</span></span>
+                                <span class="metric-value text-accent-orange"><span x-text="Number(tempSensor2.temperature).toFixed(2)"></span><span class="metric-unit">°C</span></span>
                             </div>
                             <div class="metric">
                                 <span class="metric-label"><i class="bi bi-droplet"></i> Humidity</span>
-                                <span class="metric-value text-accent-blue"><span x-text="tempSensor2.humidity"></span><span class="metric-unit">%</span></span>
+                                <span class="metric-value text-accent-blue"><span x-text="Number(tempSensor2.humidity).toFixed(2)"></span><span class="metric-unit">%</span></span>
                             </div>
-                            <template x-if="tempSensor2.pressure">
-                                <div class="metric">
-                                    <span class="metric-label"><i class="bi bi-speedometer2"></i> Pressure</span>
-                                    <span class="metric-value"><span x-text="tempSensor2.pressure"></span><span class="metric-unit">hPa</span></span>
-                                </div>
-                            </template>
                             <div class="timestamp"><i class="bi bi-clock"></i> <span x-text="tempSensor2.time"></span></div>
                         </div>
                     </template>
                     <p class="no-data" x-show="!tempSensor2">No temperature data available.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Temperature 2 History
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="temp2Chart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
