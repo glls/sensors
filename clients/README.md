@@ -57,7 +57,7 @@ Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
-   ```
+```
 
 3. **Edit the service file:**
     * **`User`**: Replace `your_user` with the non-root username you want to run the script under.

@@ -5,6 +5,10 @@
 This repository contains a system for collecting and storing sensor data from various environmental sensors. The system
 is designed to be modular, allowing for easy integration of new sensors and data sources.
 
+
+
+![Dashboard Screenshot](screenshot.png)
+
 ## Architecture
 
 The architecture of the system consists of these main components:
