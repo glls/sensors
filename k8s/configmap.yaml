@@ -10,3 +10,4 @@ data:
   DB_NAME: "sensors"
   DB_USER: "postgres"
   TZ: "Europe/Athens"
+  REDIS_HOST: "192.168.33.5"

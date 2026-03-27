@@ -59,11 +59,16 @@ spec:
                 secretKeyRef:
                   name: sensors-secret
                   key: SECRET_KEY
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: REDIS_HOST
           readinessProbe:
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 10
             # Pod won't receive traffic until this passes.
             # Prevents requests hitting a pod that isn't ready yet.

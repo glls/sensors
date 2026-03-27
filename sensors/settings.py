@@ -76,9 +76,13 @@ WSGI_APPLICATION = 'sensors.wsgi.application'
 ASGI_APPLICATION = 'sensors.asgi.application'
 
 # WebSocket settings
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(REDIS_HOST, 6379)],
+        },
     },
 }
 # Database
