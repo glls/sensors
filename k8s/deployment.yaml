@@ -17,12 +17,8 @@ spec:
     spec:
       containers:
         - name: sensors
-          # Build and push this image first:
-          #   docker buildx build --platform linux/arm64 -t sensors:latest --load .
-          # Or use a registry:
-          #   docker buildx build --platform linux/arm64 -t myregistry/sensors:latest --push .
-          image: sensors:latest
-          imagePullPolicy: Never   # use local image; change to Always if pulling from a registry
+          image: 192.168.33.33:5000/sensors:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
@@ -69,6 +65,18 @@ spec:
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 10
+            # Pod won't receive traffic until this passes.
+            # Prevents requests hitting a pod that isn't ready yet.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            # If this fails 3 times in a row, k3s kills and restarts the pod.
+            # initialDelaySeconds must be > readinessProbe to avoid killing
+            # a pod that is still starting up.
           resources:
             requests:
               cpu: "100m"
