@@ -63,6 +63,26 @@ kubectl get nodes   # both nodes should appear as Ready
 
 ## Known issues & fixes
 
+### WebSockets not working - uvicorn[standard] required
+
+**Symptom:** HTTP works, WebSocket connections refused. Pod logs show:
+```
+WARNING: No supported WebSocket library detected.
+WARNING: Unsupported upgrade request.
+```
+
+**Cause:** `uvicorn` alone is a minimal install - HTTP only. WebSocket support
+requires the `[standard]` extras which adds the `websockets` library, plus
+`uvloop` (faster event loop) and `httptools` (faster HTTP parsing).
+Dev environments often have these installed globally, masking the missing dep.
+
+**Fix:** Use `uvicorn[standard]` in `requirements.txt`:
+```
+uvicorn[standard]~=0.34.0
+```
+
+---
+
 ### gl-rpi4tv: SSD USB I/O errors on boot
 
 **Symptom:** I/O errors on `sda`, k3s-agent fails to start after reboot.
@@ -84,6 +104,28 @@ Verify after reboot:
 ```sh
 dmesg | grep -i "152d\|uas\|jmicron"
 # Expected: "UAS is ignored for this device, using usb-storage instead"
+```
+
+---
+
+### nip.io not resolving - Fritz.box DNS rebind protection
+
+**Symptom:** `dig sensors.192.168.33.50.nip.io` returns `ANSWER: 0`.
+Works fine when queried directly against `8.8.8.8`.
+
+**Cause:** Fritz.box drops DNS responses where a public domain resolves to a
+private IP (192.168.x.x) - DNS rebind protection.
+
+**Fix 1 - Whitelist nip.io in Fritz.box** (recommended, fixes for whole network):
+```
+fritz.box -> Home Network -> Network -> DNS Rebind Protection
+-> add "nip.io" to exceptions
+```
+
+**Fix 2 - Bypass Fritz.box DNS on the client machine:**
+```sh
+sudo nmcli con mod "$(nmcli -t -f NAME con show --active | head -1)" ipv4.dns "8.8.8.8"
+sudo nmcli con up "$(nmcli -t -f NAME con show --active | head -1)"
 ```
 
 ---
