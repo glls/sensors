@@ -127,10 +127,10 @@ window.sensorData = function sensorData() {
             : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
     }
 
-    function buildHistory(rows, fields) {
+    function buildHistory(rows, fields, range) {
         const h = { labels: [], datasets: {} };
         for (const row of rows) {
-            h.labels.push(fmtLabel(row.time, null));
+            h.labels.push(fmtLabel(row.time, range));
             for (const f of fields) {
                 if (!h.datasets[f]) h.datasets[f] = [];
                 h.datasets[f].push(row[f]);
@@ -433,19 +433,10 @@ window.sensorData = function sensorData() {
                 fetch(`/api/history/?sensor=temp2&range=${range}`).then(r => r.json()),
             ]);
 
-            const fmt = t => fmtLabel(t, range);
-
-            state.history.outdoor = buildHistory(outdoor, ['pm10', 'pm25', 'temperature', 'humidity', 'pressure']);
-            state.history.outdoor.labels = outdoor.map(r => fmt(r.time));
-
-            state.history.indoor = buildHistory(indoor, ['aqi', 'tvoc', 'eco2']);
-            state.history.indoor.labels = indoor.map(r => fmt(r.time));
-
-            state.history.temp1 = buildHistory(temp1, ['temperature', 'humidity', 'pressure']);
-            state.history.temp1.labels = temp1.map(r => fmt(r.time));
-
-            state.history.temp2 = buildHistory(temp2, ['temperature', 'humidity', 'pressure']);
-            state.history.temp2.labels = temp2.map(r => fmt(r.time));
+            state.history.outdoor = buildHistory(outdoor, ['pm10', 'pm25', 'temperature', 'humidity', 'pressure'], range);
+            state.history.indoor  = buildHistory(indoor,  ['aqi', 'tvoc', 'eco2'], range);
+            state.history.temp1   = buildHistory(temp1,   ['temperature', 'humidity', 'pressure'], range);
+            state.history.temp2   = buildHistory(temp2,   ['temperature', 'humidity', 'pressure'], range);
 
             updateChart(state.charts.outdoor, state.history.outdoor);
             updateChart(state.charts.indoor,  state.history.indoor);

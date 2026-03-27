@@ -229,6 +229,9 @@ any pod can handle any WebSocket connection since state is shared via Redis.
 
 ## Redeploy after code changes
 
+Bump the version in `VERSION` before deploying (e.g. `1.0.1` → `1.0.2`).
+Docker layer caching means only changed layers are rebuilt and pushed - fast.
+
 On `gl-rpi4tv.local`:
 ```sh
 git pull

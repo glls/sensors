@@ -1,8 +1,11 @@
 import json
+import time as _time
 
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import path, include
 from django.views.generic.base import RedirectView
@@ -53,7 +56,6 @@ def _serialize_temp(obj):
 
 
 def latest_sensors(request):
-    from django.http import JsonResponse
     latest_air = SensorDataAir.objects.order_by('-time').first()
     latest_indoor = SensorDataIndoor.objects.order_by('-time').first()
     latest_temp1 = SensorDataTemp.objects.filter(sensor_id=1).order_by('-time').first()
@@ -101,15 +103,10 @@ def home(request):
         'temp2History': _serialize_temp_list(temp2_history),
     })
 
-    import time as _time
-    from django.conf import settings
     return render(request, 'home.html', {'initial_data': initial_data, 'cache_bust': int(_time.time()), 'version': settings.VERSION})
 
 
 def history_data(request):
-    from django.http import JsonResponse
-    from django.db import connection
-
     sensor = request.GET.get('sensor', 'outdoor')
     range_param = request.GET.get('range', '1d')
 
