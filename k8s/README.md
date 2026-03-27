@@ -140,17 +140,17 @@ docker save sensors:latest | ssh gl@gl-rpi4tv.local "sudo k3s ctr images import 
 
 ## Step 3 - Apply manifests
 
-From the project root (Pi 500 or master):
-```sh
-kubectl apply -f k8s/namespace.yaml    # create the 'sensors' namespace
-kubectl apply -f k8s/secret.yaml       # DB password, Django secret key
-kubectl apply -f k8s/configmap.yaml    # DB host, port, name, user, TZ
-kubectl apply -f k8s/deployment.yaml   # the actual app pod
-kubectl apply -f k8s/service.yaml      # internal stable address for the pod
-kubectl apply -f k8s/ingress.yaml      # expose via Traefik at sensors.local
-```
+`kubectl apply` is declarative - you describe the desired state and it figures
+out what needs to change. Run it multiple times safely; it will report:
+- `created` - resource is new
+- `configured` - resource existed but was updated
+- `unchanged` - resource already matches the file, nothing to do
 
-Or all at once:
+`kubectl apply -f k8s/` applies files in alphabetical order. The namespace must
+exist before any other resource can be created inside it, so it is prefixed
+`00-` to guarantee it sorts first.
+
+From the project root (Pi 500 or master):
 ```sh
 kubectl apply -f k8s/
 ```
