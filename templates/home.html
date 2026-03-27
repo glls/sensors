@@ -286,6 +286,20 @@
         </div>
     </div>
 
+    <!-- Range selector -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="text-secondary small">History:</span>
+        <div class="btn-group btn-group-sm">
+            <button class="btn" :class="selectedRange==='live' ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('live')">Live</button>
+            <button class="btn" :class="selectedRange==='1d'   ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('1d')">1D</button>
+            <button class="btn" :class="selectedRange==='1w'   ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('1w')">1W</button>
+            <button class="btn" :class="selectedRange==='1m'   ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('1m')">1M</button>
+            <button class="btn" :class="selectedRange==='6m'   ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('6m')">6M</button>
+            <button class="btn" :class="selectedRange==='1y'   ? 'btn-primary' : 'btn-outline-secondary'" @click="changeRange('1y')">1Y</button>
+        </div>
+        <span x-show="selectedRange !== 'live'" class="text-secondary small" x-text="'(averaged — ' + {'1d':'hourly','1w':'6h','1m':'daily','6m':'weekly','1y':'bi-weekly'}[selectedRange] + ')'"></span>
+    </div>
+
     <!-- Outdoor Sensor -->
     <div class="row g-3 mb-3">
         <div class="col-md-4">
@@ -474,7 +488,7 @@
 </script>
 
 <footer style="text-align:center; padding: 8px; font-size: 0.75rem; color: #888;">
-    v{{ version }}
+    Sensors v{{ version }} by <a href="https://georgelitos.com" target="_blank" style="color:#888;">George Litos</a>
 </footer>
 
 </body>

@@ -120,8 +120,28 @@ window.sensorData = function sensorData() {
         chart.update('none');
     }
 
+    function fmtLabel(isoTime, range) {
+        const d = new Date(isoTime);
+        return range === '1d'
+            ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+            : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+    }
+
+    function buildHistory(rows, fields) {
+        const h = { labels: [], datasets: {} };
+        for (const row of rows) {
+            h.labels.push(fmtLabel(row.time, null));
+            for (const f of fields) {
+                if (!h.datasets[f]) h.datasets[f] = [];
+                h.datasets[f].push(row[f]);
+            }
+        }
+        return h;
+    }
+
     return {
         wsConnected: false,
+        selectedRange: 'live',
         outdoorSensor: null,
         indoorSensor: null,
         tempSensor1: null,
@@ -262,39 +282,48 @@ window.sensorData = function sensorData() {
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
+                const liveCharts = this.selectedRange === 'live';
 
                 if (data.type === 'air') {
                     this.outdoorSensor = this.formatSensorData(data);
                     state.lastTimes.outdoor = data.time;
-                    pushPoint(state.history.outdoor, data.time, {
-                        pm10: data.pm10, pm25: data.pm25,
-                        temperature: data.temperature, humidity: data.humidity,
-                        pressure: data.pressure,
-                    });
-                    updateChart(state.charts.outdoor, state.history.outdoor);
+                    if (liveCharts) {
+                        pushPoint(state.history.outdoor, data.time, {
+                            pm10: data.pm10, pm25: data.pm25,
+                            temperature: data.temperature, humidity: data.humidity,
+                            pressure: data.pressure,
+                        });
+                        updateChart(state.charts.outdoor, state.history.outdoor);
+                    }
                 } else if (data.type === 'indoor') {
                     this.indoorSensor = this.formatSensorData(data);
                     state.lastTimes.indoor = data.time;
-                    pushPoint(state.history.indoor, data.time, {
-                        aqi: data.aqi, tvoc: data.tvoc, eco2: data.eco2,
-                    });
-                    updateChart(state.charts.indoor, state.history.indoor);
+                    if (liveCharts) {
+                        pushPoint(state.history.indoor, data.time, {
+                            aqi: data.aqi, tvoc: data.tvoc, eco2: data.eco2,
+                        });
+                        updateChart(state.charts.indoor, state.history.indoor);
+                    }
                 } else if (data.type === 'temperature' && data.sensor_id === 1) {
                     this.tempSensor1 = this.formatSensorData(data);
                     state.lastTimes.temp1 = data.time;
-                    pushPoint(state.history.temp1, data.time, {
-                        temperature: data.temperature, humidity: data.humidity,
-                        pressure: data.pressure,
-                    });
-                    updateChart(state.charts.temp1, state.history.temp1);
+                    if (liveCharts) {
+                        pushPoint(state.history.temp1, data.time, {
+                            temperature: data.temperature, humidity: data.humidity,
+                            pressure: data.pressure,
+                        });
+                        updateChart(state.charts.temp1, state.history.temp1);
+                    }
                 } else if (data.type === 'temperature' && data.sensor_id === 2) {
                     this.tempSensor2 = this.formatSensorData(data);
                     state.lastTimes.temp2 = data.time;
-                    pushPoint(state.history.temp2, data.time, {
-                        temperature: data.temperature, humidity: data.humidity,
-                        pressure: data.pressure,
-                    });
-                    updateChart(state.charts.temp2, state.history.temp2);
+                    if (liveCharts) {
+                        pushPoint(state.history.temp2, data.time, {
+                            temperature: data.temperature, humidity: data.humidity,
+                            pressure: data.pressure,
+                        });
+                        updateChart(state.charts.temp2, state.history.temp2);
+                    }
                 }
             };
         },
@@ -388,6 +417,40 @@ window.sensorData = function sensorData() {
                     }
                 })
                 .catch(err => console.error('Error fetching air pollution data:', err));
+        },
+
+        async changeRange(range) {
+            this.selectedRange = range;
+            if (range === 'live') {
+                window.location.reload();
+                return;
+            }
+
+            const [outdoor, indoor, temp1, temp2] = await Promise.all([
+                fetch(`/api/history/?sensor=outdoor&range=${range}`).then(r => r.json()),
+                fetch(`/api/history/?sensor=indoor&range=${range}`).then(r => r.json()),
+                fetch(`/api/history/?sensor=temp1&range=${range}`).then(r => r.json()),
+                fetch(`/api/history/?sensor=temp2&range=${range}`).then(r => r.json()),
+            ]);
+
+            const fmt = t => fmtLabel(t, range);
+
+            state.history.outdoor = buildHistory(outdoor, ['pm10', 'pm25', 'temperature', 'humidity', 'pressure']);
+            state.history.outdoor.labels = outdoor.map(r => fmt(r.time));
+
+            state.history.indoor = buildHistory(indoor, ['aqi', 'tvoc', 'eco2']);
+            state.history.indoor.labels = indoor.map(r => fmt(r.time));
+
+            state.history.temp1 = buildHistory(temp1, ['temperature', 'humidity', 'pressure']);
+            state.history.temp1.labels = temp1.map(r => fmt(r.time));
+
+            state.history.temp2 = buildHistory(temp2, ['temperature', 'humidity', 'pressure']);
+            state.history.temp2.labels = temp2.map(r => fmt(r.time));
+
+            updateChart(state.charts.outdoor, state.history.outdoor);
+            updateChart(state.charts.indoor,  state.history.indoor);
+            updateChart(state.charts.temp1,   state.history.temp1);
+            updateChart(state.charts.temp2,   state.history.temp2);
         },
 
         formatSensorData(data) {
