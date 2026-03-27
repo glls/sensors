@@ -1,4 +1,4 @@
-# Sensors — k3s Deployment
+# Sensors - k3s Deployment
 
 Local ARM64 deployment on two Raspberry Pi 4 nodes running k3s.
 
@@ -8,9 +8,9 @@ Local ARM64 deployment on two Raspberry Pi 4 nodes running k3s.
 
 | Node | Role | OS | Docker | kubectl |
 |------|------|----|--------|---------|
-| `GL-pi4-ap.local` | k3s server (master) | DietPi / Debian 13 | no | yes |
-| `gl-rpi4tv.local` | k3s agent (worker) | DietPi / Debian 13 | yes — build node | no |
-| Pi 500 (workstation) | — | — | no | yes |
+| `GL-pi4-ap.local` | k3s server (master) | DietPi v10.2.3 / Debian 13 | no | yes |
+| `gl-rpi4tv.local` | k3s agent (worker) | DietPi / Debian 12 (bookworm) | yes - build node | no |
+| Pi 500 (workstation) | - | Debian 13 (trixie) | no | yes |
 
 k3s version: **v1.34.5+k3s1**
 
@@ -48,7 +48,7 @@ echo 'write-kubeconfig-mode: "0644"' | sudo tee /etc/rancher/k3s/config.yaml
 sudo systemctl restart k3s
 ```
 
-**Copy to your workstation** (GL-pi4-ap uses Dropbear — use ssh+cat, not scp):
+**Copy to your workstation** (GL-pi4-ap uses Dropbear - use ssh+cat, not scp):
 ```sh
 mkdir -p ~/.kube
 ssh gl@GL-pi4-ap.local "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
@@ -70,12 +70,12 @@ kubectl get nodes   # both nodes should appear as Ready
 **Cause:** JMicron JMS578 USB-SATA bridge (idVendor=152d, idProduct=0578) uses
 the UAS driver by default, which is unstable on RPi4 under boot-time I/O load.
 
-**Fix 1 — Disable UAS for this device** (append to the single line in `/boot/firmware/cmdline.txt`):
+**Fix 1 - Disable UAS for this device** (append to the single line in `/boot/firmware/cmdline.txt`):
 ```
 usb-storage.quirks=152d:0578:u
 ```
 
-**Fix 2 — Raise USB port current** (new line in `/boot/firmware/config.txt`):
+**Fix 2 - Raise USB port current** (new line in `/boot/firmware/config.txt`):
 ```
 max_usb_current=1
 ```
@@ -90,7 +90,7 @@ dmesg | grep -i "152d\|uas\|jmicron"
 
 ## Key concept: k3s uses containerd, not Docker
 
-k3s bundles **containerd** as its container runtime — Docker's image store is
+k3s bundles **containerd** as its container runtime - Docker's image store is
 separate and invisible to k3s. Images built with `docker build` must be
 explicitly imported into containerd before k3s can use them.
 
@@ -102,7 +102,7 @@ docker build → Docker store   (k3s can't see this)
 
 ---
 
-## Step 1 — Clone and build
+## Step 1 - Clone and build
 
 On `gl-rpi4tv.local`:
 ```sh
@@ -114,7 +114,7 @@ docker images | grep sensors
 
 ---
 
-## Step 2 — Import into k3s
+## Step 2 - Import into k3s
 
 On `gl-rpi4tv.local`:
 ```sh
@@ -138,7 +138,7 @@ docker save sensors:latest | ssh gl@gl-rpi4tv.local "sudo k3s ctr images import 
 
 ---
 
-## Step 3 — Apply manifests
+## Step 3 - Apply manifests
 
 From the project root (Pi 500 or master):
 ```sh
@@ -157,7 +157,7 @@ kubectl apply -f k8s/
 
 ---
 
-## Step 4 — Verify and debug
+## Step 4 - Verify and debug
 
 ```sh
 # Overview of everything in the namespace
@@ -166,7 +166,7 @@ kubectl -n sensors get all
 # Watch pods come up (Pending → ContainerCreating → Running)
 kubectl -n sensors get pods -w
 
-# Detailed events for a pod — first place to look when something is wrong
+# Detailed events for a pod - first place to look when something is wrong
 kubectl -n sensors describe pod <pod-name>
 
 # Stream app logs (like docker logs -f)
@@ -181,7 +181,7 @@ kubectl -n sensors get ingress
 
 ---
 
-## Step 5 — Access the app
+## Step 5 - Access the app
 
 Find node IPs:
 ```sh
@@ -195,7 +195,7 @@ Add to `/etc/hosts` on the machine you browse from:
 
 Open http://sensors.local
 
-WebSockets (`ws://sensors.local/ws/...`) work out of the box — Traefik
+WebSockets (`ws://sensors.local/ws/...`) work out of the box - Traefik
 handles the HTTP upgrade automatically.
 
 ---
@@ -237,7 +237,7 @@ kubectl delete -f k8s/
 ## Optional: local registry
 
 Running a registry on your LAN means both nodes pull images automatically
-without manual import steps — better workflow for multi-node setups.
+without manual import steps - better workflow for multi-node setups.
 
 ```sh
 # On one node (or a separate machine):
@@ -271,6 +271,6 @@ sudo systemctl restart k3s-agent  # worker nodes
 
 ## Secrets note
 
-`secret.yaml` stores credentials in plaintext — fine for local learning.
+`secret.yaml` stores credentials in plaintext - fine for local learning.
 For production use [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets)
 or [External Secrets Operator](https://external-secrets.io).
