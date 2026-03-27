@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensors
+  namespace: sensors
+  labels:
+    app: sensors
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sensors
+  template:
+    metadata:
+      labels:
+        app: sensors
+    spec:
+      containers:
+        - name: sensors
+          # Build and push this image first:
+          #   docker buildx build --platform linux/arm64 -t sensors:latest --load .
+          # Or use a registry:
+          #   docker buildx build --platform linux/arm64 -t myregistry/sensors:latest --push .
+          image: sensors:latest
+          imagePullPolicy: Never   # use local image; change to Always if pulling from a registry
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DJANGO_SETTINGS_MODULE
+              value: sensors.settings
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: DEBUG
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: sensors-config
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sensors-secret
+                  key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sensors-secret
+                  key: SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

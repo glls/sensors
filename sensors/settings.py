@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s8jec*=7!q=$%hny#ucd^_dvavmd9p#8k5a-dme&b#fb&$33gl'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-s8jec*=7!q=$%hny#ucd^_dvavmd9p#8k5a-dme&b#fb&$33gl')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -85,12 +86,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'timescale.db.backends.postgresql',
-        # Or 'django_timescaledb.backends.postgresql' if using TimescaleDB ORM features
-        'NAME': 'sensors',  # Replace with your TimescaleDB database name
-        'USER': 'postgres',  # Replace with your TimescaleDB username
-        'PASSWORD': 'postgres',  # Replace with your TimescaleDB password
-        'HOST': '192.168.33.5',  # Replace with your TimescaleDB host if not localhost
-        'PORT': '5432',  # Default PostgreSQL port
+        'NAME': os.environ.get('DB_NAME', 'sensors'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+        'HOST': os.environ.get('DB_HOST', '192.168.33.5'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 

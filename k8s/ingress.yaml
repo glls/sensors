@@ -1,0 +1,24 @@
+# k3s ships with Traefik as the default ingress controller.
+# This ingress exposes the app at http://sensors.local
+# Add "sensors.local" to your /etc/hosts pointing to the k3s node IP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sensors
+  namespace: sensors
+  annotations:
+    # WebSocket support — Traefik handles upgrade headers automatically,
+    # but this annotation makes intent explicit.
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - host: sensors.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sensors
+                port:
+                  number: 80
