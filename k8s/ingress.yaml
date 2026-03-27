@@ -1,18 +1,17 @@
 # k3s ships with Traefik as the default ingress controller.
-# This ingress exposes the app at http://sensors.local
-# Add "sensors.local" to your /etc/hosts pointing to the k3s node IP.
+# App is accessible at http://sensors.192.168.33.50.nip.io
+# nip.io is a public wildcard DNS - no /etc/hosts or local DNS needed.
+# WebSockets are handled natively by Traefik - no extra config required.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sensors
   namespace: sensors
   annotations:
-    # WebSocket support — Traefik handles upgrade headers automatically,
-    # but this annotation makes intent explicit.
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   rules:
-    - host: sensors.local
+    - host: sensors.192.168.33.50.nip.io
       http:
         paths:
           - path: /
