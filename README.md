@@ -47,6 +47,20 @@ The web interface allows users to view sensor data in real-time.
 uvicorn sensors.asgi:application --host 0.0.0.0 --port 8000 --reload --lifespan=off
 ```
 
+## Deployment
+
+### Local development
+```sh
+uvicorn sensors.asgi:application --host 0.0.0.0 --port 8000 --reload --lifespan=off
+```
+
+### k3s (Raspberry Pi cluster)
+See [k8s/README.md](k8s/README.md) for the full deployment guide covering:
+- Two RPi4 node cluster setup (k3s v1.34.5)
+- Local image registry
+- Redis channel layer for WebSocket scaling
+- Traefik ingress with nip.io
+
 ## TODO
 
 - [ ] add user events
