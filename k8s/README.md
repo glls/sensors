@@ -4,73 +4,86 @@ Local ARM64 deployment on two Raspberry Pi 4 nodes running k3s.
 
 ---
 
+## Cluster setup
+
+| Node | Role | OS | Docker | kubectl |
+|------|------|----|--------|---------|
+| `GL-pi4-ap.local` | k3s server (master) | DietPi / Debian 13 | no | yes |
+| `gl-rpi4tv.local` | k3s agent (worker) | DietPi / Debian 13 | yes — build node | no |
+| Pi 500 (workstation) | — | — | no | yes |
+
+k3s version: **v1.34.5+k3s1**
+
+- Build images on `gl-rpi4tv.local` (has Docker)
+- Run `kubectl` from Pi 500 or directly on `GL-pi4-ap.local`
+- Both nodes on 1G ethernet, SSDs via USB
+
+Label the worker so it shows correctly:
+```sh
+kubectl label node gl-rpi4tv node-role.kubernetes.io/worker=worker
+kubectl get nodes
+```
+
+---
+
 ## Requirements
 
-### Cluster nodes (DietPi / Debian 13, k3s v1.34.5+k3s1)
+### kubectl (Pi 500 workstation)
 
-| Node | Role | Has Docker |
-|------|------|-----------|
-| `GL-pi4-ap.local` | k3s server (master) | no |
-| `gl-rpi4tv.local` | k3s agent (worker) | yes — build node |
-
-k3s bundles containerd — that's all a node needs to **run** containers.
-Docker only lives on the worker because that's where we build images.
-
-Verify from the master:
+Install matching the cluster version exactly:
 ```sh
-sudo k3s kubectl get nodes   # both nodes should appear as Ready
+curl -LO "https://dl.k8s.io/release/v1.34.5/bin/linux/arm64/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+kubectl version --client
 ```
 
-### Fixing k3s-agent not starting on reboot (gl-rpi4tv.local)
+### kubeconfig
 
-The agent starts before the network is ready — a systemd race condition common
-on headless DietPi. Fix it by overriding the unit to wait for the network:
+k3s writes its kubeconfig to `/etc/rancher/k3s/k3s.yaml` on the master.
 
+**Allow non-root access on the master** (do this once):
 ```sh
-# On gl-rpi4tv.local:
-sudo systemctl edit k3s-agent
+# On GL-pi4-ap.local:
+echo 'write-kubeconfig-mode: "0644"' | sudo tee /etc/rancher/k3s/config.yaml
+sudo systemctl restart k3s
 ```
 
-Add these lines in the editor:
-```ini
-[Unit]
-After=network-online.target
-Wants=network-online.target
-```
-
-Then reload and enable:
+**Copy to your workstation** (GL-pi4-ap uses Dropbear — use ssh+cat, not scp):
 ```sh
-sudo systemctl daemon-reload
-sudo systemctl enable k3s-agent
-sudo reboot
-```
-
-After reboot, confirm:
-```sh
-sudo systemctl status k3s-agent
-```
-
-### On your workstation (where you run kubectl from)
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| **kubectl** | Talk to the cluster | `sudo apt install kubectl` or via [k3s kubeconfig](#kubeconfig) |
-
-#### kubeconfig
-
-k3s writes its kubeconfig to `/etc/rancher/k3s/k3s.yaml` on the server node.
-Copy it to your workstation so `kubectl` knows where the cluster is:
-
-```sh
-# On your workstation:
 mkdir -p ~/.kube
-scp pi@<server-node-ip>:/etc/rancher/k3s/k3s.yaml ~/.kube/config
+ssh gl@GL-pi4-ap.local "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
 
-# Fix the server address (k3s defaults to 127.0.0.1 inside the file):
-sed -i 's/127.0.0.1/<server-node-ip>/g' ~/.kube/config
+# Fix the server address (k3s writes 127.0.0.1 inside the file):
+sed -i 's/127.0.0.1/<GL-pi4-ap-IP>/g' ~/.kube/config
 
-# Confirm it works:
-kubectl get nodes
+kubectl get nodes   # both nodes should appear as Ready
+```
+
+---
+
+## Known issues & fixes
+
+### gl-rpi4tv: SSD USB I/O errors on boot
+
+**Symptom:** I/O errors on `sda`, k3s-agent fails to start after reboot.
+
+**Cause:** JMicron JMS578 USB-SATA bridge (idVendor=152d, idProduct=0578) uses
+the UAS driver by default, which is unstable on RPi4 under boot-time I/O load.
+
+**Fix 1 — Disable UAS for this device** (append to the single line in `/boot/firmware/cmdline.txt`):
+```
+usb-storage.quirks=152d:0578:u
+```
+
+**Fix 2 — Raise USB port current** (new line in `/boot/firmware/config.txt`):
+```
+max_usb_current=1
+```
+
+Verify after reboot:
+```sh
+dmesg | grep -i "152d\|uas\|jmicron"
+# Expected: "UAS is ignored for this device, using usb-storage instead"
 ```
 
 ---
@@ -78,7 +91,7 @@ kubectl get nodes
 ## Key concept: k3s uses containerd, not Docker
 
 k3s bundles **containerd** as its container runtime — Docker's image store is
-separate and invisible to k3s. Images you build with `docker build` must be
+separate and invisible to k3s. Images built with `docker build` must be
 explicitly imported into containerd before k3s can use them.
 
 ```
@@ -89,16 +102,13 @@ docker build → Docker store   (k3s can't see this)
 
 ---
 
-## Step 1 — Build the image
+## Step 1 — Clone and build
 
-Run this on the RPi node where the pod will land, from the project root:
-
+On `gl-rpi4tv.local`:
 ```sh
+git clone git@github.com:glls/sensors.git
+cd sensors
 docker build -t sensors:latest .
-```
-
-Verify:
-```sh
 docker images | grep sensors
 ```
 
@@ -106,12 +116,10 @@ docker images | grep sensors
 
 ## Step 2 — Import into k3s
 
+On `gl-rpi4tv.local`:
 ```sh
 docker save sensors:latest | sudo k3s ctr images import -
 ```
-
-`docker save` streams the image as a tar to stdout.
-`k3s ctr images import -` reads from stdin into containerd.
 
 Verify containerd can see it:
 ```sh
@@ -121,15 +129,18 @@ sudo k3s ctr images ls | grep sensors
 
 > **Two-node note:** k3s schedules pods on either node automatically.
 > Import the image on **both** nodes to avoid `ImagePullBackOff` errors,
-> or set up a [local registry](#optional-local-registry) so both nodes
-> pull from a central place.
+> or set up a [local registry](#optional-local-registry).
+
+If building on a separate machine, pipe directly over SSH:
+```sh
+docker save sensors:latest | ssh gl@gl-rpi4tv.local "sudo k3s ctr images import -"
+```
 
 ---
 
 ## Step 3 — Apply manifests
 
-Apply in this order (dependencies first):
-
+From the project root (Pi 500 or master):
 ```sh
 kubectl apply -f k8s/namespace.yaml    # create the 'sensors' namespace
 kubectl apply -f k8s/secret.yaml       # DB password, Django secret key
@@ -139,7 +150,7 @@ kubectl apply -f k8s/service.yaml      # internal stable address for the pod
 kubectl apply -f k8s/ingress.yaml      # expose via Traefik at sensors.local
 ```
 
-Or all at once (k8s handles dependency order internally):
+Or all at once:
 ```sh
 kubectl apply -f k8s/
 ```
@@ -172,7 +183,7 @@ kubectl -n sensors get ingress
 
 ## Step 5 — Access the app
 
-Find your server node IP:
+Find node IPs:
 ```sh
 kubectl get nodes -o wide
 ```
@@ -191,13 +202,17 @@ handles the HTTP upgrade automatically.
 
 ## Redeploy after code changes
 
+On `gl-rpi4tv.local`:
 ```sh
 # 1. Rebuild
 docker build -t sensors:latest .
 
-# 2. Re-import into containerd (repeat on both nodes if needed)
+# 2. Re-import into containerd
 docker save sensors:latest | sudo k3s ctr images import -
+```
 
+From workstation:
+```sh
 # 3. Trigger a rolling restart
 kubectl -n sensors rollout restart deployment/sensors
 
