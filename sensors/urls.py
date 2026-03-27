@@ -102,7 +102,8 @@ def home(request):
     })
 
     import time as _time
-    return render(request, 'home.html', {'initial_data': initial_data, 'cache_bust': int(_time.time())})
+    from django.conf import settings
+    return render(request, 'home.html', {'initial_data': initial_data, 'cache_bust': int(_time.time()), 'version': settings.VERSION})
 
 
 urlpatterns = [
