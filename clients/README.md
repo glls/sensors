@@ -20,9 +20,50 @@ https://learn.adafruit.com/adafruit-ens160-mox-gas-sensor/circuitpython-python
 
 pip3 install adafruit-circuitpython-ens160
 
-### Service for the Client
+## Configuration
 
-#### Systemd Service Setup for BME280 Client, AM2302 Client, ENS160 Client, and AIRROHR Client
+The clients read their configuration from environment variables, loaded from a
+`.env` file in the client's working directory or set in the systemd unit.
+
+Each client picks exactly one destination - set **either** `SEND_TO_TIMESCALEDB`
+**or** `SEND_TO_API` to `True`, never both, or the client exits with an error.
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `SEND_TO_TIMESCALEDB` | all | Write readings straight to TimescaleDB (default `False`) |
+| `SEND_TO_API` | all | POST readings to the Django API instead (default `False`) |
+| `BME280_SENSOR_ID` | bme280, ens160 | Sensor row id in the `sensors` table |
+| `DHT22_SENSOR_ID` | am2302 | Sensor row id |
+| `ENS160_SENSOR_ID` | ens160 | Sensor row id |
+| `AIRROHR_SENSOR_ID` | airrohr | Sensor row id |
+| `AIRROHR_URL` | airrohr | URL of the airRohr device's JSON endpoint |
+
+Needed when `SEND_TO_TIMESCALEDB=True`:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TIMESCALEDB_HOST` | - | Database host (e.g. `192.168.33.5`) |
+| `TIMESCALEDB_PORT` | `5432` | Database port |
+| `TIMESCALEDB_DBNAME` | - | Database name (e.g. `sensors`) |
+| `TIMESCALEDB_USER` | - | Database user |
+| `TIMESCALEDB_PASSWORD` | - | Database password |
+
+Needed when `SEND_TO_API=True`. Note the port - **the server listens on 4040**,
+so these URLs must match wherever the app is actually published (port 80 when
+going through the k3s ingress):
+
+| Variable | Example | Endpoint |
+|----------|---------|----------|
+| `API_TEMP_URL` | `http://192.168.33.50:4040/api/sensors/temperature/data/` | BME280 / AM2302 readings |
+| `API_INDOOR_URL` | `http://192.168.33.50:4040/api/sensors/indoor/data/` | ENS160 readings |
+| `API_AIR_URL` | `http://192.168.33.50:4040/api/sensors/air/data/` | airRohr readings |
+
+Posting to the API is what drives the live dashboard - the API broadcasts each
+new reading over WebSockets, while writing directly to TimescaleDB does not.
+
+## Service for the Client
+
+### Systemd Service Setup for BME280 Client, AM2302 Client, ENS160 Client, and AIRROHR Client
 
 To run the `bme280_client.py` script as a systemd service for reliable background operation and automatic startup on
 boot, follow these steps:
