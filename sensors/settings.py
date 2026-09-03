@@ -78,12 +78,17 @@ WSGI_APPLICATION = 'sensors.wsgi.application'
 ASGI_APPLICATION = 'sensors.asgi.application'
 
 # WebSocket settings
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+# Redis runs on the UNRAID server and is shared with other apps, so the channel
+# layer gets its own database. A redis:// URL is required here - the (host, port)
+# tuple form of `hosts` has no way to select a db and always uses db 0.
+REDIS_HOST = os.environ.get('REDIS_HOST', '192.168.33.5')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_DB = os.environ.get('REDIS_DB', '1')
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(REDIS_HOST, 6379)],
+            'hosts': [f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'],
         },
     },
 }

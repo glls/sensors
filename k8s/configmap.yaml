@@ -10,4 +10,6 @@ data:
   DB_NAME: "sensors"
   DB_USER: "postgres"
   TZ: "Europe/Athens"
-  REDIS_HOST: "192.168.33.5"
+  REDIS_HOST: "192.168.33.5"   # Shared Redis on UNRAID
+  REDIS_PORT: "6379"
+  REDIS_DB: "1"                # db 0 is used by another app

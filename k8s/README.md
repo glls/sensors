@@ -87,14 +87,22 @@ docker build + push → local registry (192.168.33.33:5000)
 
 The app depends on two external services running outside the cluster:
 
-| Service | Host | Port |
-|---------|------|------|
-| TimescaleDB | 192.168.33.5 | 5432 |
-| Redis | 192.168.33.5 | 6379 |
+| Service | Host | Port | Notes |
+|---------|------|------|-------|
+| TimescaleDB | 192.168.33.5 | 5432 | database `sensors` |
+| Redis | 192.168.33.5 | 6379 | db `1` - shared instance, db 0 belongs to another app |
 
 Redis is used as the Django Channels layer - required for WebSockets to work
 correctly across multiple replicas. Without it each pod has its own isolated
 memory and WebSocket connections break when load balanced across pods.
+
+The UNRAID Redis is shared with other apps, so the channel layer is pinned to
+its own database via `REDIS_DB`. Check which databases are already taken before
+changing it - only DBs listed here hold keys:
+
+```sh
+redis-cli -h 192.168.33.5 info keyspace
+```
 
 ---
 
@@ -300,12 +308,14 @@ channels-redis~=4.2.0
 
 `settings.py`:
 ```python
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_HOST = os.environ.get('REDIS_HOST', '192.168.33.5')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_DB = os.environ.get('REDIS_DB', '1')
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(REDIS_HOST, 6379)],
+            'hosts': [f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'],
         },
     },
 }
@@ -314,7 +324,14 @@ CHANNEL_LAYERS = {
 `configmap.yaml`:
 ```yaml
 REDIS_HOST: "192.168.33.5"
+REDIS_PORT: "6379"
+REDIS_DB: "1"
 ```
+
+**Note:** the `redis://host:port/db` URL form is required to select a database.
+The `hosts: [(REDIS_HOST, 6379)]` tuple form is passed straight to the Redis
+connection pool as `host`/`port` only, so it always lands on db 0 - which on a
+shared Redis means sharing `asgi:*` keys with whatever else is using it.
 
 ---
 
