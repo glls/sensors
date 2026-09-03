@@ -126,6 +126,25 @@ To serve on a different port, change `APP_PORT` and the `-p` mapping together
 (`-e APP_PORT=8080 -p 8080:8080`), or keep the container port and remap only the
 host side (`-p 9000:4040`).
 
+#### Restarting
+
+`docker run` fails with `The container name "/sensors" is already in use` when a
+container by that name still exists, even a stopped one. Pick by what you need:
+
+```sh
+docker restart sensors                  # same image, just bounce it
+docker rm -f sensors                    # free the name, then run again
+docker run -d --rm --name sensors ...   # container deletes itself on stop
+```
+
+`--rm` keeps the name from ever being left behind, at the cost of `docker logs`
+after the container exits. The rebuild loop:
+
+```sh
+docker build -t sensors:latest . && docker rm -f sensors
+docker run -d --rm --name sensors -p 4040:4040 sensors:latest
+```
+
 Useful follow-ups:
 
 ```sh
