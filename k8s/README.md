@@ -235,6 +235,24 @@ any pod can handle any WebSocket connection since state is shared via Redis.
 
 ---
 
+
+## Ports
+
+| Where | Value | Set in |
+|-------|-------|--------|
+| Container listener | 4040 | `APP_PORT` in `configmap.yaml` (default `4040` from the Dockerfile `ENV`) |
+| Pod port | 4040 | `containerPort` in `deployment.yaml`, named `http` |
+| Service | 80 -> `http` | `service.yaml` |
+| Ingress | 80 | `ingress.yaml` |
+
+To change the app port, edit **both** `APP_PORT` in `configmap.yaml` and
+`containerPort` in `deployment.yaml` - Kubernetes does not allow env var
+substitution in `containerPort`. The probes and service reference the port by
+name (`http`), so they follow `containerPort` automatically. The Service port
+stays 80 because the Ingress targets it.
+
+---
+
 ## Redeploy after code changes
 
 Bump the version in `VERSION` before deploying (e.g. `1.0.1` → `1.0.2`).

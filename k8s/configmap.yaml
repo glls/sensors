@@ -5,6 +5,7 @@ metadata:
   namespace: sensors
 data:
   DEBUG: "True"
+  APP_PORT: "4040"           # must match containerPort in deployment.yaml
   DB_HOST: "192.168.33.5"   # Your existing TimescaleDB host
   DB_PORT: "5432"
   DB_NAME: "sensors"

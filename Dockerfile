@@ -9,6 +9,12 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput
 
-EXPOSE 8000
+# Listening port. Override at runtime with -e APP_PORT=... (or APP_PORT in the
+# k8s configmap, which must match the containerPort in deployment.yaml).
+ENV APP_PORT=4040
 
-CMD ["uvicorn", "sensors.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--lifespan=off"]
+EXPOSE ${APP_PORT}
+
+# Shell form so ${APP_PORT} is expanded; exec keeps uvicorn as PID 1 so it still
+# receives SIGTERM on pod shutdown.
+CMD ["sh", "-c", "exec uvicorn sensors.asgi:application --host 0.0.0.0 --port ${APP_PORT} --lifespan=off"]

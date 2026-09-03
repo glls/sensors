@@ -8,5 +8,5 @@ spec:
     app: sensors
   ports:
     - port: 80
-      targetPort: 8000
+      targetPort: http   # named port on the pod - see deployment.yaml
   type: ClusterIP
