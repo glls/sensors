@@ -18,6 +18,21 @@ window.sensorData = function sensorData() {
         purple: '#a78bfa',
     };
 
+    // One colour per measured quantity, so a metric looks the same in every
+    // chart. Colours repeat only across metrics that never share a chart.
+    const METRIC_COLORS = {
+        temperature: COLORS.orange,
+        humidity: COLORS.blue,
+        pressure: COLORS.green,
+        pm10: COLORS.red,
+        pm25: COLORS.purple,
+        pm2_5: COLORS.purple,
+        tvoc: COLORS.purple,
+        eco2: COLORS.teal,
+        co: COLORS.teal,
+        no2: COLORS.orange,
+    };
+
     // All non-reactive state lives here, outside Alpine's proxy
     const state = {
         lastTimes: { outdoor: null, indoor: null, temp1: null, temp2: null },
@@ -216,55 +231,55 @@ window.sensorData = function sensorData() {
             state.charts.outdoor = buildChart('outdoorChart', state.history.outdoor, {
                 dualAxis: true,
                 lines: [
-                    { key: 'pm10', label: 'PM10', color: COLORS.red },
-                    { key: 'pm25', label: 'PM2.5', color: COLORS.orange },
-                    { key: 'temperature', label: 'Temp', color: COLORS.teal },
-                    { key: 'humidity', label: 'Humidity', color: COLORS.blue },
-                    { key: 'pressure', label: 'Pressure', color: COLORS.green, yAxis: 'y1' },
+                    { key: 'pm10', label: 'PM10', color: METRIC_COLORS.pm10 },
+                    { key: 'pm25', label: 'PM2.5', color: METRIC_COLORS.pm25 },
+                    { key: 'temperature', label: 'Temp', color: METRIC_COLORS.temperature },
+                    { key: 'humidity', label: 'Humidity', color: METRIC_COLORS.humidity },
+                    { key: 'pressure', label: 'Pressure', color: METRIC_COLORS.pressure, yAxis: 'y1' },
                 ],
             });
 
             state.charts.indoor = buildChart('indoorChart', state.history.indoor, {
                 dualAxis: true,
                 lines: [
-                    { key: 'tvoc', label: 'TVOC', color: COLORS.purple },
-                    { key: 'eco2', label: 'eCO2', color: COLORS.teal, yAxis: 'y1' },
+                    { key: 'tvoc', label: 'TVOC', color: METRIC_COLORS.tvoc },
+                    { key: 'eco2', label: 'eCO2', color: METRIC_COLORS.eco2, yAxis: 'y1' },
                 ],
             });
 
             state.charts.temp1 = buildChart('temp1Chart', state.history.temp1, {
                 dualAxis: true,
                 lines: [
-                    { key: 'temperature', label: 'Temp', color: COLORS.orange },
-                    { key: 'humidity', label: 'Humidity', color: COLORS.blue },
-                    { key: 'pressure', label: 'Pressure', color: COLORS.teal, yAxis: 'y1' },
+                    { key: 'temperature', label: 'Temp', color: METRIC_COLORS.temperature },
+                    { key: 'humidity', label: 'Humidity', color: METRIC_COLORS.humidity },
+                    { key: 'pressure', label: 'Pressure', color: METRIC_COLORS.pressure, yAxis: 'y1' },
                 ],
             });
 
             state.charts.temp2 = buildChart('temp2Chart', state.history.temp2, {
                 dualAxis: false,
                 lines: [
-                    { key: 'temperature', label: 'Temp', color: COLORS.orange },
-                    { key: 'humidity', label: 'Humidity', color: COLORS.blue },
+                    { key: 'temperature', label: 'Temp', color: METRIC_COLORS.temperature },
+                    { key: 'humidity', label: 'Humidity', color: METRIC_COLORS.humidity },
                 ],
             });
 
             state.charts.weather = buildChart('weatherChart', state.history.weather, {
                 dualAxis: true,
                 lines: [
-                    { key: 'temperature', label: 'Temp', color: COLORS.orange },
-                    { key: 'humidity', label: 'Humidity', color: COLORS.blue },
-                    { key: 'pressure', label: 'Pressure', color: COLORS.teal, yAxis: 'y1' },
+                    { key: 'temperature', label: 'Temp', color: METRIC_COLORS.temperature },
+                    { key: 'humidity', label: 'Humidity', color: METRIC_COLORS.humidity },
+                    { key: 'pressure', label: 'Pressure', color: METRIC_COLORS.pressure, yAxis: 'y1' },
                 ],
             });
 
             state.charts.pollution = buildChart('pollutionChart', state.history.pollution, {
                 dualAxis: false,
                 lines: [
-                    { key: 'pm2_5', label: 'PM2.5', color: COLORS.orange },
-                    { key: 'pm10', label: 'PM10', color: COLORS.red },
-                    { key: 'co', label: 'CO', color: COLORS.teal },
-                    { key: 'no2', label: 'NO2', color: COLORS.purple },
+                    { key: 'pm2_5', label: 'PM2.5', color: METRIC_COLORS.pm2_5 },
+                    { key: 'pm10', label: 'PM10', color: METRIC_COLORS.pm10 },
+                    { key: 'co', label: 'CO', color: METRIC_COLORS.co },
+                    { key: 'no2', label: 'NO2', color: METRIC_COLORS.no2 },
                 ],
             });
         },
