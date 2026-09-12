@@ -41,7 +41,8 @@ def load_config() -> Dict[str, Any]:
 def get_airrohr_data(url: str) -> Optional[Dict[str, Any]]:
     """Get air quality data from AirRohr sensor."""
     try:
-        response = requests.get(url)
+        # No timeout means a silent airRohr leaves the socket hung in recv forever
+        response = requests.get(url, timeout=(5, 10))
         response.raise_for_status()
         data = response.json()
 
